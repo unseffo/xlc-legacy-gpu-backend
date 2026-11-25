@@ -44,6 +44,7 @@
     "shader_model_asked": "6_8",
     "highest_shader_model": "6.8",
     "resource_binding_tier": 3,
+    "resource_heap_tier": 1,
     "tiled_resources_tier": 4,
     "view_instancing_tier": 2
   },

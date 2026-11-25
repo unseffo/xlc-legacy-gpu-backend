@@ -1,0 +1,2180 @@
+warning: use of deprecated method `std::sync::atomic::Atomic::<u64>::fetch_update`: renamed to `try_update` for consistency
+    --> crates\xcl\src\hle\d3d12x\real.rs:3388:41
+     |
+3388 |     let injected = heap && INJECTED_OOM.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1)).is_ok();
+     |                                         ^^^^^^^^^^^^
+     |
+     = note: `#[warn(deprecated)]` on by default
+help: replace the use of the deprecated method
+     |
+3388 -     let injected = heap && INJECTED_OOM.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1)).is_ok();
+3388 +     let injected = heap && INJECTED_OOM.try_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1)).is_ok();
+     |
+
+warning: use of deprecated method `std::sync::atomic::Atomic::<u32>::fetch_update`: renamed to `try_update` for consistency
+   --> crates\xcl\src\hle\xgameruntime\mod.rs:547:27
+    |
+547 |         let _ = USER.refs.fetch_update(Ordering::AcqRel, Ordering::Acquire, |v| Some(v.saturating_sub(1).max(1)));
+    |                           ^^^^^^^^^^^^
+    |
+help: replace the use of the deprecated method
+    |
+547 -         let _ = USER.refs.fetch_update(Ordering::AcqRel, Ordering::Acquire, |v| Some(v.saturating_sub(1).max(1)));
+547 +         let _ = USER.refs.try_update(Ordering::AcqRel, Ordering::Acquire, |v| Some(v.saturating_sub(1).max(1)));
+    |
+
+warning: `xcl` (lib) generated 2 warnings (run `cargo fix --lib -p xcl` to apply 2 suggestions)
+warning: `xcl` (lib test) generated 2 warnings (2 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
+     Running unittests src\lib.rs (target\debug\build\xcl/a2e682ac6d85a3c8\out\xcl-a2e682ac6d85a3c8.exe)
+
+running 1124 tests
+test config::tests::device_type_override_cascades_into_resolve ... ok
+test config::tests::every_series_s_spelling_gets_the_series_s_memory ... ok
+test config::tests::pls_drive_is_the_mount_onto_the_pls_folder ... ok
+test config::tests::raytracing_tier_parsing ... ok
+test config::tests::partial_file_uses_defaults ... xcl: ClzeroLoop { end_reg: 2 } in clzero_loop_test.exe+0x0 – a console CPU instruction this CPU lacks: emulated (logged once)
+ok
+xcl: Clzero in clzero_a32.exe+0x0 – a console CPU instruction this CPU lacks: emulated (logged once)
+test config::tests::title_memory_is_read_in_any_case ... ok
+test config::tests::default_roundtrips_through_toml ... ok
+test eh::tests::cmp_eflags_matches_x86_64_sub_flags ... ok
+test gpu::adapter::tests::selector_matching ... ok
+test gpu::adapter::tests::numeric_selector_falls_back_to_model_token_when_out_of_range ... ok
+test eh::tests::finds_both_cookie_checks ... ok
+test gpu::adapter::tests::selector_parsing ... ok
+test config::tests::the_console_id_fits_the_console_id_buffer ... ok
+test gpu::agility::tests::candidate_order_respects_explicit_env_override ... ok
+test gpu::agility::tests::encode_wide_supports_utf8_and_legacy_ansi_code_pages ... ok
+test gpu::agility::tests::env_trimming_trailing_slash_and_no_sm66_messages ... ok
+test gpu::agility::tests::format_sdk_path_ensures_trailing_separator ... ok
+test gpu::agility::tests::reads_sdk_version_from_exported_symbol ... ok
+test gpu::agility::tests::rejects_malformed_export_rvas_and_cross_section_reads ... ok
+test gpu::agility::tests::rejects_non_dll_missing_zero_and_forwarder_exports ... ok
+test gpu::bvh::tests::grazing_axis_aligned_ray_and_nan_box ... ok
+test gpu::bvh::tests::prebuild_size_and_compressed_header ... ok
+test gpu::bvh::tests::instance_node_layout ... ok
+test gpu::bvh::tests::small_inputs ... ok
+test gpu::bvh::tests::triangle_hit_small_and_large_det_avoids_underflow_and_overflow ... ok
+test gpu::bvh::tests::triangle_node_types_0_to_3_select_expected_vertices ... ok
+test gpu::desc::tests::cbv_is_float4_rows ... ok
+test gpu::desc::tests::cube_views_require_a_nonempty_whole_number_of_faces ... ok
+test gpu::desc::tests::decodes_ssharp ... ok
+test gpu::desc::tests::decodes_tsharp ... ok
+test gpu::desc::tests::decodes_vsharp ... ok
+test gpu::desc::tests::image_mips_and_array_views_stay_within_resource_dimensions ... ok
+test gpu::desc::tests::non_array_resources_ignore_tsharp_depth ... ok
+test gpu::desc::tests::packed_formats_reorder_channels ... ok
+test gpu::desc::tests::resource_depth_is_rejected_instead_of_silently_clamped ... ok
+test gpu::desc::tests::resource_dimensions_respect_d3d12_texture_limits ... ok
+test gpu::desc::view_tests::view_descriptors_decode_back ... ok
+test gpu::dxbc::tests::parses_mesh_psv ... ok
+test gpu::dxbc::tests::parses_v1_signature ... ok
+test gpu::dxil::bitreader_tests::a_shorter_binop_record_has_only_its_own_operands ... ok
+test gpu::dxil::bitreader_tests::atomics_use_bitcode_ordering_codes ... ok
+test gpu::dxil::bitreader_tests::float_constants_ignore_bits_above_their_width ... ok
+test gpu::agility::tests::resolve_dir_handles_explicit_override_and_implicit_fallback ... ok
+test gpu::dxil::bitstream::tests::block_lengths_are_back_patched_in_words ... ok
+test gpu::dxil::bitreader_tests::reader_round_trips_block_structure ... ok
+test gpu::dxil::bitstream::tests::signed_vbr_operands ... ok
+test gpu::dxil::bitstream::tests::vbr_and_fixed_fields_pack_little_endian ... ok
+test gpu::dxil::cfg::tests::loop_entered_in_the_middle_is_split ... ok
+test gpu::dxil::compact_tests::a_mask_read_whole_after_one_copy_only_splits_the_class ... ok
+xcl: UMA: 3 sparse VRAM window(s) (12 GiB VA) + 1 coherent window(s) (512 MB) at 0x400000000
+test eh::tests::bounded_cstr_stops_at_nul_limit_and_unreadable_memory ... ok
+test eh::tests::clzero_with_an_address_size_prefix_zeroes_at_eax ... ok
+test eh::tests::clzero_loop_aligns_updates_flags_and_falls_back_when_end_le_start ... ok
+test eh::tests::code_bytes_on_the_instructions_page_are_not_asked_about ... ok
+test gpu::dxil::container::tests::digest_covers_both_tail_layouts ... ok
+test gpu::dxil::container::tests::digest_matches_dxc_signed_container ... ok
+test gpu::dxil::container::tests::psv_matches_dxc_layout_for_compute_with_two_raw_uavs ... ok
+xcl: DXC: dxcompiler 1.9.2602.17 (21d28f72), dxil 1.9.2602.17, from C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64
+test gpu::dxil::core_tests::branchy_graphics_stages_validate ... ok
+test gpu::dxil::core_tests::dump_dxc_lowering ... ignored
+xcl: [SHADER] direct DXIL compact form: 515 blocks of 7 kinds
+xcl: [SHADER] direct DXIL compact form: 259 blocks of 7 kinds
+test gpu::bvh::tests::trace_matches_brute_force ... ok
+test gpu::dxil::core_tests::f64_bisect ... ok
+test gpu::dxil::core_tests::f64_conversions_validate ... ok
+test gpu::dxil::core_tests::geometry_mode_validates ... ok
+xcl: [SHADER] direct DXIL compact form: 2 blocks of 2 kinds
+test gpu::dxil::core_tests::f16_conversions_and_products_default_to_round_to_nearest_even ... ok
+xcl: [SHADER] direct DXIL compact form: 163 blocks of 11 kinds
+test gpu::dxil::core_tests::gpu_direct_unaligned_multi_dword_format_store ... ok
+test gpu::dxil::compact_tests::gpu_compact_form_spends_the_loop_budget_as_the_plain_form ... ok
+xcl: [SHADER] direct DXIL compact form: 515 blocks of 11 kinds
+test gpu::dxil::compact_tests::gpu_compact_form_runs_as_the_plain_form ... ok
+xcl: [SHADER] direct DXIL compact form: 259 blocks of 11 kinds
+test gpu::dxil::core_tests::direct_and_hlsl_graphics_stages_link ... ok
+test gpu::dxil::core_tests::ps_get_lod_with_a_static_sampler ... ok
+test gpu::dxil::core_tests::graphics_stages_with_a_branch_before_their_exports ... ok
+test gpu::dxil::core_tests::straight_line_and_loop_kernels_validate ... ok
+test gpu::dxil::core_tests::uf_small_ieee_bit_math_matches_exact_formula ... ok
+test gpu::dxil::coverage::tests::live_fallback_summary ... ok
+test gpu::dxil::coverage::tests::reason_keys_collapse_operands ... ok
+test gpu::dxil::coverage::tests::report_counts_and_ranks ... ok
+test gpu::dxil::coverage::tests::sampling_is_seeded_and_bounded ... ok
+test gpu::dxil::coverage::tests::synthetic_programs_through_translate_mode ... ok
+test gpu::dxil::fuzz_tests::amd_reduced_seeds ... ignored
+test gpu::dxil::fuzz_tests::debug_seed ... ignored
+test gpu::dxil::core_tests::s_setreg_b32_mode_bit3_does_not_underflow ... ok
+xcl: [SHADER] direct DXIL compact form: 515 blocks of 7 kinds
+xcl: [SHADER] direct DXIL compact form: 259 blocks of 7 kinds
+4001 instructions: 459.1603ms
+test gpu::dxil::core_tests::long_programs_translate ... ok
+test gpu::dxil::core_tests::multi_window_mem_format_and_bvh_validate ... ok
+3000 instructions: 556.9652ms, 130644 B
+test gpu::dxil::core_tests::long_pixel_shader_translates_fast ... ok
+test gpu::dxil::fuzz_tests::shader_flags_follow_plain_instruction_types ... ok
+test gpu::dxil::compact_tests::the_compact_form_lowers_a_repeated_block_once ... ok
+SKIPPED gpu::dxil::geometry_tests::gpu_geometry_direct_records: no GPU / DXC / mesh shaders
+test gpu::dxil::geometry_tests::gpu_geometry_direct_records ... ok
+test gpu::dxil::graphics::tests::a_loop_value_first_reached_through_its_phi_keeps_the_phis_inputs ... ok
+test gpu::dxil::graphics::tests::cs_static_resources_match_dxc ... ok
+test gpu::dxil::graphics::tests::elements_from_dxbc_rows ... ok
+SKIPPED gpu::dxil::graphics::tests::emitted_ms_primitive_attribute_reaches_the_pixel_shader: no mesh shaders
+test gpu::dxil::graphics::tests::emitted_ms_primitive_attribute_reaches_the_pixel_shader ... ok
+test gpu::dxil::geometry_tests::geometry_forms_validate ... ok
+SKIPPED gpu::dxil::graphics::tests::emitted_ms_ps_draw_a_triangle: no mesh shaders
+test gpu::dxil::graphics::tests::emitted_ms_ps_draw_a_triangle ... ok
+test gpu::dxil::graphics::tests::emitted_vs_ps_draw_a_triangle ... ok
+test gpu::dxil::graphics::tests::groupshared_bytes_follow_the_16bit_layout ... ok
+test gpu::dxil::graphics::tests::ms_basic_parts_match_dxc ... ok
+test gpu::dxil::graphics::tests::ms_payload_parts_match_dxc ... ok
+test gpu::dxil::graphics::tests::ps_16bit_signatures_match_dxc ... ok
+test gpu::dxil::graphics::tests::ps_basic_parts_match_dxc ... ok
+test gpu::dxil::graphics::tests::ps_basic_validates ... ok
+test gpu::dxil::graphics::tests::ps_early_depth_matches_dxc ... ok
+test gpu::dxil::graphics::tests::ps_modes_parts_match_dxc ... ok
+test gpu::dxil::graphics::tests::ps_outputs_parts_match_dxc ... ok
+test gpu::dxil::graphics::tests::emitted_ps_samples_a_texture_with_implicit_lod ... ok
+test gpu::dxil::graphics::tests::ps_packing_parts_match_dxc ... ok
+test gpu::dxil::graphics::tests::vs_basic_parts_match_dxc ... ok
+test gpu::dxil::graphics::tests::ps_static_resources_match_dxc ... ok
+test gpu::dxil::graphics::tests::vs_basic_validates ... ok
+test gpu::dxil::graphics::tests::vs_clip_parts_match_dxc ... ok
+test gpu::dxil::graphics::tests::vs_clip_rows_parts_match_dxc ... ok
+test gpu::dxil::graphics::tests::vs_control_dependence_matches_dxc ... ok
+test gpu::dxil::graphics::tests::vs_packing_parts_match_dxc ... ok
+test gpu::dxil::graphics::tests::vs_uav_matches_dxc ... ok
+test gpu::dxil::lower_image::heap_bounds_tests::ps_implicit_lod_sample_and_get_lod_validate ... ok
+test gpu::dxil::lower_wide::cmp64_tests::carry_ops_avoid_i64_icmp ... ok
+test gpu::dxil::lower_image::heap_bounds_tests::mimg_view_and_sampler_heap_indices_are_guarded ... ok
+test gpu::dxil::module::opt::tests::block_cse_invalidates_wave_and_quad_calls_across_discard ... ok
+test gpu::dxil::lower_wide::cmp64_tests::cmp64_uses_32bit_dwords_no_i64_icmp ... ok
+test gpu::dxil::msaa_tests::direct_msaa_store_is_rejected ... ok
+test gpu::dxil::msaa_tests::direct_msaa_loads_precede_get_dimensions ... ok
+test gpu::dxil::msaa_tests::gpu_direct_image_get_resinfo_d16 ... ok
+xcl: [SHADER] direct DXIL compact form: 10003 blocks of 11 kinds
+test gpu::dxil::msaa_tests::gpu_direct_msaa_image_loads ... ok
+test gpu::dxil::msaa_tests::render_target_sample_ops_validate ... ok
+test gpu::dxil::msaa_tests::msaa_texture_ops_run ... ok
+test gpu::dxil::ops_tests::approximate_float_unary_ops_are_within_tolerance ... ok
+test gpu::dxil::ops_tests::double_unary_legality_matches_dxil_tables ... ok
+test gpu::dxil::ops_tests::derivatives_in_compute_run ... ok
+test gpu::dxil::ops_tests::dx_op_attrs_match_dxc ... ok
+test gpu::dxil::ops_tests::doubles_match_cpu ... ok
+test gpu::dxil::ops_tests::exact_float_unary_ops_match_cpu ... ok
+test gpu::dxil::ops_tests::float_binary_tertiary_and_half_conversions_match_cpu ... ok
+test gpu::dxil::ops_tests::groupshared_barrier_and_atomics_run ... ok
+test gpu::dxil::ops_tests::int64_bit_ops_match_cpu ... ok
+SKIPPED gpu::dxil::ops_tests::half_precision_overloads_run: no native 16-bit ops
+test gpu::dxil::ops_tests::half_precision_overloads_run ... ok
+test gpu::dxil::ops_tests::integer_ops_match_cpu ... ok
+test gpu::dxil::ops_tests::raw_and_structured_buffer_atomics_run ... ok
+test gpu::dxil::ops_tests::texture_variants_validate ... ok
+test gpu::dxil::ops_tests::texture_ops_run ... ok
+test gpu::dxil::ops_tests::typed_buffer_ops_validate ... ok
+test gpu::dxil::ops_tests::typed_buffer_ops_run ... ok
+test gpu::dxil::ops_tests::uaddc_and_usubb_match_cpu ... ok
+test gpu::dxil::ops_tests::wave_lane_index_is_declared_readonly ... ok
+test gpu::dxil::ops_tests::uav_array_3d_stores_loads_and_texture_atomics_run ... ok
+test gpu::dxil::robustness_tests::bad_constants_phis_and_stores_are_errors ... ok
+test gpu::dxil::robustness_tests::forward_reference_outside_a_phi_is_an_error ... ok
+test gpu::dxil::robustness_tests::gep_and_extractvalue_into_wrong_types_are_errors ... ok
+test gpu::dxil::robustness_tests::instruction_after_a_terminator_is_an_error ... ok
+test gpu::dxil::robustness_tests::redeclared_function_and_bad_calls_are_errors ... ok
+test gpu::dxil::ops_tests::wave_ops_match_cpu ... ok
+test gpu::dxil::robustness_tests::unknown_overload_suffix_is_an_error ... ok
+test gpu::dxil::robustness_tests::use_of_a_void_value_and_wrong_finish_are_errors ... ok
+test gpu::dxil::round_tests::direct_f32_round_mode_unsupported_op_rejected ... ok
+test gpu::dxil::round_tests::directed_reference_basics ... ok
+test gpu::dxil::robustness_tests::translation_is_byte_identical_across_runs_and_threads ... ok
+test gpu::dxil::round_tests::gpu_direct_f32_round_modes_dynamic_and_denormals ... ok
+test gpu::dxil::round_tests::gpu_direct_f32_round_preserved_denormal_times_inf_is_inf ... ok
+test gpu::dxil::round_tests::gpu_frexp_exp_f32_denorm_with_directed_rounding ... ok
+test gpu::dxil::shader::pops_rov_tests::non_pops_pixel_shader_does_not_mark_rovs ... ok
+test gpu::dxil::shader::pops_rov_tests::pops_pixel_shader_marks_uavs_as_rov_and_validates ... ok
+test gpu::dxil::shader::pops_rov_tests::pops_pixel_shader_without_uavs_on_heap_windows_validates_cleanly ... ok
+test gpu::dxil::tests::batched_replacements_match_one_at_a_time ... ok
+test gpu::dxil::tests::blocks_are_written_in_reverse_post_order ... ok
+test gpu::dxil::tests::emitted_kernel_disassembles_like_dxc_output ... ok
+test gpu::dxil::tests::emitted_kernel_passes_the_sdk_validator ... ok
+test gpu::dxil::tests::emitted_kernel_runs_on_the_gpu ... ok
+error: Invalid bitcode signature
+test gpu::dxil::validate::tests::malformed_containers_are_errors ... ok
+test gpu::fence::tests::completed_fence_skips_event_registration ... ok
+test gpu::fence::tests::event_wake_requires_a_valid_completed_value ... ok
+test gpu::fence::tests::pending_and_registration_failure_keep_their_own_errors ... ok
+test gpu::fence::tests::removal_precedes_completion_even_for_zero_target ... ok
+test gpu::fence::tests::timeout_resamples_the_fence ... ok
+test gpu::pack::tests::finds_records_between_noise ... ok
+test gpu::pack::tests::inflate_rejects_hostile_ranges_and_size_mismatches ... ok
+test gpu::pack::tests::qualified_names_are_whole_records ... ok
+test gpu::pack::tests::scan_is_bounded_for_hostile_offsets_and_arbitrary_bytes ... ok
+test gpu::rdna2::tests::basic_scalar_and_vector ... ok
+test gpu::rdna2::tests::console_legacy_mad_mac ... ok
+test gpu::rdna2::tests::encoder_round_trips ... ok
+test gpu::rdna2::tests::far_jumps_check_incoming_far_targets_before_resolving ... ok
+test gpu::rdna2::tests::far_jumps_keep_uninterrupted_add_and_subtract_sequences ... ok
+test gpu::rdna2::tests::far_jumps_with_an_entry_into_the_sequence_stay_indirect ... ok
+test gpu::rdna2::tests::image_operands_and_modifiers ... ok
+test gpu::rdna2::tests::literal_in_unused_valu_field ... ok
+xcl: [SHADER] direct DXIL compact form: 10003 blocks of 11 kinds
+LLVM gfx10 corpus: 23812 instructions, decoded 23405, name match 23405, length match 23405
+top mismatches: []
+top decode failures: [("s_store_dwordx2", 17), ("s_store_dword", 17), ("s_buffer_store_dwordx2", 16), ("s_store_dwordx4", 16), ("s_buffer_store_dword", 16), ("s_buffer_store_dwordx4", 15), ("s_atomic_add", 8), ("s_atomic_cmpswap", 6), ("s_buffer_atomic_cmpswap_x2", 6), ("s_atomic_cmpswap_x2", 6), ("s_buffer_atomic_cmpswap", 6), ("s_buffer_atomic_add", 6), ("ds_or_src2_b32", 5), ("ds_sub_src2_u32", 5), ("ds_max_src2_i64", 5), ("ds_max_src2_f64", 5), ("ds_inc_src2_u32", 5), ("ds_rsub_src2_u32", 5), ("ds_add_src2_f32", 5), ("ds_sub_src2_u64", 5), ("ds_add_src2_u64", 5), ("ds_min_src2_f32", 5), ("ds_max_src2_u64", 5), ("ds_min_src2_i32", 5), ("ds_write_src2_b64", 5)]
+test gpu::rdna2::tests::llvm_gfx10_corpus ... ok
+test gpu::rdna2::tests::llvm_gfx10_image_text ... ok
+test gpu::rdna2::tests::llvm_gfx10_sdwa_text ... ok
+test gpu::rdna2::tests::scalar_register_fields_are_scaled ... ok
+test gpu::rdna2::tests::sdwa_and_dpp_src0 ... ok
+test gpu::rdna2::tests::sdwa_modifiers_and_scalar_sources ... ok
+test gpu::rdna2::tests::smem_text_matches_llvm ... ok
+test gpu::rdna2::tests::truncated_and_unknown ... ok
+test gpu::rdna2::tests::vgpr_in_nine_bit_field ... ok
+test gpu::recomp::attribute_tests::packed_registers_are_one_param ... ok
+test gpu::recomp::attribute_tests::ps_attributes_from_the_input_table ... ok
+test gpu::recomp::attribute_tests::unread_inputs_take_no_fetch_vgprs ... ok
+test gpu::recomp::cfg::tests::a_branch_into_a_loop_with_no_way_out_decides_both_sides ... ok
+test gpu::recomp::cfg::tests::a_loop_depends_on_its_own_branch ... ok
+test gpu::recomp::cfg::tests::a_loop_with_no_way_out_has_no_post_dominator ... ok
+test gpu::recomp::cfg::tests::an_if_with_else ... ok
+test gpu::recomp::cfg::tests::an_if_without_else ... ok
+test gpu::recomp::cfg::tests::an_indirect_jump_gives_no_graph ... ok
+test gpu::recomp::cfg::tests::every_block_of_a_side_with_no_way_out_depends_on_the_branch ... ok
+test gpu::recomp::dxc::cache_tests::cache_key_tracks_the_dxc_toolchain ... ok
+test gpu::recomp::dxc::cache_tests::cache_statistics_separate_deferred_misses_failures_and_hits ... ok
+test gpu::recomp::dxc::cache_tests::compilation_error_samples_are_bounded_and_distinct ... ok
+test gpu::bvh::tests::scene_trace_matches_brute_force ... ok
+test gpu::recomp::dxc::cache_tests::different_cache_keys_do_not_block_each_other ... ok
+test gpu::recomp::dxc::cache_tests::dxil_cache_round_trip ... ok
+test gpu::recomp::dxc::cache_tests::path_aliases_share_the_same_cache_flight ... ok
+test gpu::recomp::dxc::cache_tests::process_cache_mutex_serializes_the_same_file ... ok
+test gpu::recomp::dxc::cache_tests::rejects_invalid_fresh_dxil_without_poisoning_the_cache ... ok
+test gpu::dxil::round_tests::gpu_direct_f32_round_modes_static ... ok
+test gpu::recomp::dxc::cache_tests::validates_dxil_cache_structure_and_rebuilds_corruption ... ok
+test gpu::recomp::dxc::version_tests::dxc_below_1_8_is_outdated ... ok
+DXC: dxcompiler 1.9.2602.17 (21d28f72), dxil 1.9.2602.17, from C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64
+test gpu::recomp::dxc::version_tests::the_loaded_dxc_is_identified ... ok
+test gpu::recomp::dxc::version_tests::the_sdk_with_the_newest_dxc_is_tried_first ... ok
+test gpu::recomp::dxc::version_tests::versions_parse_and_compare_as_numbers ... ok
+test gpu::recomp::dxil::assemble::tests::ir_text_assembles_signs_and_runs ... ok
+test gpu::recomp::emit::tests::format_helpers_select_uint4_components_without_runtime_indexing ... ok
+test gpu::recomp::dxc::version_tests::a_source_compiled_at_o0_has_no_debug_noops ... ok
+test gpu::recomp::lane_masks::tests::a_lane_branch_still_proves_exec_when_the_launch_exec_is_unknown ... ok
+test gpu::recomp::lane_masks::tests::a_lane_outside_exec_at_launch_keeps_its_guard_until_exec_is_written ... ok
+test gpu::recomp::lane_masks::tests::a_loop_that_narrows_exec_is_found_on_its_back_edge ... ok
+test gpu::recomp::lane_masks::tests::a_skipped_if_needs_no_guard ... ok
+test gpu::recomp::lane_masks::tests::a_vccz_branch_is_a_lane_branch_only_where_vcc_is_the_exec ... ok
+test gpu::recomp::lane_masks::tests::an_if_without_its_skip_is_guarded ... ok
+test gpu::recomp::lane_masks::tests::explicit_src_scc_reads_are_validated ... ok
+test gpu::recomp::lane_masks::tests::implication_tests_agree_with_the_built_formulas ... ok
+test gpu::recomp::lane_masks::tests::lanes_leaving_a_loop_keep_it_unguarded ... ok
+test gpu::recomp::lane_masks::tests::unsupported_control_flow_is_refused ... ok
+test gpu::recomp::lane_masks::tests::vccz_branch_checks_bits_outside_exec ... ok
+test gpu::recomp::lane_masks::tests::whole_quad_mode_of_the_launch_exec_is_every_lane ... ok
+test gpu::recomp::lane_masks::tests::whole_wave_scc_accounts_for_inactive_lanes ... ok
+test gpu::recomp::heap_window_tests::gpu_raw_window_view_reaches_its_top ... ok
+test gpu::recomp::lower::tests::a_2d_or_3d_group_numbers_its_threads_as_the_console_does ... ok
+SKIPPED gpu::recomp::lower::tests::a_2d_or_3d_group_agrees_with_the_hlsl_path_on_the_gpu: no wave64
+test gpu::recomp::lower::tests::a_2d_or_3d_group_agrees_with_the_hlsl_path_on_the_gpu ... ok
+test gpu::recomp::lower::tests::a_compute_program_agrees_with_the_hlsl_path_on_the_gpu ... ok
+test gpu::recomp::lower::tests::a_compute_program_takes_its_group_and_thread_ids ... ok
+test gpu::recomp::lower::tests::a_mask_left_behind_by_lanes_that_skipped_its_write ... ok
+test gpu::recomp::lower::tests::a_mask_read_as_a_number_is_refused ... ok
+test gpu::recomp::lower::tests::a_far_jump_skips_what_it_jumps_over ... ok
+test gpu::recomp::lower::tests::a_scalar_counted_in_a_loop_lanes_leave_is_not_each_lanes_own ... ok
+test gpu::recomp::dxc::cache_tests::concurrent_cache_misses_compile_once ... ok
+test gpu::recomp::lower::tests::a_ps_helper_lane_runs_the_program_but_does_not_store ... ok
+test gpu::recomp::lower::tests::a_skipped_if_runs_only_its_lanes ... ok
+test gpu::recomp::lower::tests::a_wave64_mask_left_behind_is_reported_in_both_halves ... ok
+test gpu::recomp::lower::tests::a_uniform_loop_with_a_scalar_counter ... ok
+test gpu::recomp::lower::tests::a_wave64_vs_in_32_lane_waves_that_reads_upper_lanes_is_refused ... ok
+test gpu::recomp::lower::tests::a_wave_op_on_s0_holding_a_number ... ok
+test gpu::recomp::lower::tests::a_whole_wave_decision_on_a_mask_some_lanes_lack_is_refused ... ok
+test gpu::recomp::lower::tests::add_with_carry_and_subtract_with_borrow ... ok
+test gpu::recomp::lower::tests::a_waterfall_loop_reads_the_first_lane_of_each_pass ... ok
+test gpu::recomp::lower::tests::cross_lane_reads_on_the_cpu ... ok
+test gpu::recomp::lower::tests::guard_coalescing_breaks_at_scalar_compare_and_cross_lane_ops ... ok
+test gpu::recomp::lower::tests::guarded_run_coalesces_into_one_branch_with_no_selects ... ok
+test gpu::recomp::lower::tests::lanes_leave_a_loop_one_by_one ... ok
+test gpu::recomp::lower::tests::lanes_outside_exec_at_launch_keep_their_registers ... ok
+SKIPPED gpu::recomp::lower::tests::cross_lane_reads_agree_with_the_hlsl_path_on_the_gpu: no wave64
+test gpu::recomp::lower::tests::cross_lane_reads_agree_with_the_hlsl_path_on_the_gpu ... ok
+test gpu::recomp::lower::tests::scalar_and_vector_memory_with_a_guarded_store ... ok
+test gpu::recomp::lower::tests::straight_line_scalar_and_vector_arithmetic ... ok
+test gpu::recomp::lower::tests::native_wave_branches_keep_inactive_lanes_in_scalar_control_flow ... ok
+SKIPPED gpu::recomp::lower::tests::coalesced_guarded_runs_agree_with_the_hlsl_path_on_the_gpu: no wave64
+test gpu::recomp::lower::tests::coalesced_guarded_runs_agree_with_the_hlsl_path_on_the_gpu ... ok
+test gpu::recomp::lower::tests::the_survey_reports_every_refusal ... ok
+SKIPPED gpu::recomp::lower::tests::the_wave64_lowering_agrees_with_the_hlsl_path_on_the_gpu: no wave64
+test gpu::recomp::lower::tests::the_wave64_lowering_agrees_with_the_hlsl_path_on_the_gpu ... ok
+test gpu::recomp::lower::tests::vop3_operand_selects_are_refused ... ok
+test gpu::recomp::lower::tests::wave64_masks_span_both_words ... ok
+test gpu::recomp::lower::tests::whole_quad_instructions_need_every_lane_of_the_quad ... ok
+test gpu::recomp::lower::tests::whole_quad_mode_and_conditional_selects ... ok
+test gpu::recomp::lower_dxil::tests::a_branch_on_a_mixed_mask_matches_the_hlsl_path_on_the_gpu ... ok
+test gpu::recomp::lower_dxil::tests::a_bridged_instruction_may_write_to_the_entry_block ... ok
+test gpu::recomp::lower_dxil::tests::a_bridged_v_cmpx_keeps_the_lanes_outside_exec_out ... ok
+test gpu::recomp::lower::tests::the_lowering_agrees_with_the_hlsl_path_on_the_gpu ... ok
+SKIPPED gpu::recomp::lower_dxil::tests::a_per_lane_2d_or_3d_group_runs_on_the_gpu: no wave64
+test gpu::recomp::lower_dxil::tests::a_per_lane_2d_or_3d_group_runs_on_the_gpu ... ok
+test gpu::recomp::lower_dxil::tests::a_per_lane_compute_program_runs_on_the_gpu ... ok
+test gpu::recomp::lower_dxil::tests::a_rounding_mode_the_lowering_cannot_honour_is_refused ... ok
+test gpu::recomp::lower_dxil::tests::a_per_lane_program_with_four_memory_windows_runs_on_the_gpu ... ok
+test gpu::recomp::lower::tests::the_split_form_agrees_with_the_wave64_lowering_on_the_gpu ... ok
+SKIPPED gpu::recomp::lower_dxil::tests::const_and_null_mask_operands_agree_with_hlsl_on_the_gpu: const_mask, wave64: no wave64
+test gpu::recomp::lower_dxil::tests::const_and_null_mask_operands_agree_with_hlsl_on_the_gpu ... ok
+test gpu::recomp::lower_dxil::tests::coalesced_foreign_runs_agree_on_the_gpu ... ok
+SKIPPED gpu::recomp::lower_dxil::tests::f16_programs_on_the_gpu: f16 arithmetic, wave32, per-lane form: refused (unsupported V_MUL_F16 (its #1426 semantics differ from the console's))
+SKIPPED gpu::recomp::lower_dxil::tests::f16_programs_on_the_gpu: f16 arithmetic, wave64: no wave64
+SKIPPED gpu::recomp::lower_dxil::tests::f32_programs_on_the_gpu: f32 arithmetic, wave64: no wave64
+SKIPPED gpu::recomp::lower_dxil::tests::f16_programs_on_the_gpu: f16 packed, wave32, per-lane form: refused (unsupported V_PK_MUL_F16: VOP3 modifiers (its #1426 semantics differ from the console's))
+SKIPPED gpu::recomp::lower_dxil::tests::f16_programs_on_the_gpu: f16 packed, wave64: no wave64
+test gpu::recomp::lower_dxil::tests::f16_programs_on_the_gpu ... ok
+test gpu::recomp::lower_dxil::tests::gpu_frexp_exp_f32_denorm_per_lane ... ok
+SKIPPED gpu::recomp::lower_dxil::tests::f32_programs_on_the_gpu: f32 compares, wave64: no wave64
+SKIPPED gpu::recomp::lower_dxil::tests::f64_programs_on_the_gpu: f64, wave64: no wave64
+test gpu::recomp::lower_dxil::tests::f64_programs_on_the_gpu ... ok
+SKIPPED gpu::recomp::lower_dxil::tests::f32_programs_on_the_gpu: f32 conversions, wave32, per-lane form: refused (unsupported V_CVT_F16_F32 (its #1426 semantics differ from the console's))
+SKIPPED gpu::recomp::lower_dxil::tests::f32_programs_on_the_gpu: f32 conversions, wave64: no wave64
+SKIPPED gpu::recomp::lower_dxil::tests::integer_programs_on_the_gpu: integer arithmetic, wave64: no wave64
+SKIPPED gpu::recomp::lower_dxil::tests::mask_ff0_and_flbit_agree_with_hlsl_on_the_gpu: mask_ff0_flbit, wave64: no wave64
+test gpu::recomp::lower_dxil::tests::mask_ff0_and_flbit_agree_with_hlsl_on_the_gpu ... ok
+SKIPPED gpu::recomp::lower_dxil::tests::f32_programs_on_the_gpu: f32 rounding, wave64: no wave64
+SKIPPED gpu::recomp::lower_dxil::tests::integer_programs_on_the_gpu: integer carries, wave64: no wave64
+test gpu::recomp::lower_dxil::tests::integer_programs_on_the_gpu ... ok
+SKIPPED gpu::recomp::lower_dxil::tests::f32_programs_on_the_gpu: f32 transcendentals, wave64: no wave64
+SKIPPED gpu::recomp::lower_dxil::tests::f32_programs_on_the_gpu: f32 three-source, wave64: no wave64
+test gpu::recomp::lower_dxil::tests::f32_programs_on_the_gpu ... ok
+test gpu::recomp::lower_dxil::tests::native_wave_branches_on_the_gpu ... ok
+test gpu::recomp::lower_dxil::tests::the_runtime_path_takes_the_split_form ... ok
+test gpu::recomp::mesh_dispatch::tests::layout_is_external_aligned_and_bounded ... ok
+test gpu::recomp::mesh_dispatch::tests::native_wave64_translation_does_not_include_dispatcher_foundation ... ok
+test gpu::recomp::mesh_dispatch::tests::paired_halves_match_independent_native_wave64_references ... ok
+test gpu::recomp::mesh_dispatch::tests::gpu_dispatch_matches_native_wave64_reference ... ok
+test gpu::recomp::mesh_wave::tests::accepts_forward_and_backward_instruction_targets ... ok
+test gpu::recomp::mesh_wave::tests::cfg_join_retains_taint_from_either_predecessor ... ok
+test gpu::recomp::mesh_wave::tests::classifies_misaligned_and_outside_targets ... ok
+test gpu::recomp::mesh_wave::tests::definite_overwrites_kill_register_and_scc_taint ... ok
+test gpu::recomp::mesh_wave::tests::loop_fixed_point_propagates_mask_taint ... ok
+test gpu::recomp::mesh_wave::tests::mask_taint_propagates_to_scc_branches ... ok
+test gpu::recomp::mesh_wave::tests::rejects_target_into_literal_word ... ok
+test gpu::recomp::mesh_wave::tests::reports_backedges_and_loop_headers ... ok
+test gpu::recomp::mesh_wave::tests::reports_incomplete_trailing_instruction ... ok
+test gpu::recomp::mesh_wave::tests::reports_invalid_branch_even_when_it_is_unreachable ... ok
+test gpu::recomp::mesh_wave::tests::reports_operation_counts_and_lane_provenance ... ok
+test gpu::recomp::mesh_wave::tests::reports_unknown_encoding_without_panicking ... ok
+test gpu::recomp::mesh_wave::tests::vcmp_sgpr_destination_is_a_mask ... ok
+test gpu::recomp::mesh_dispatch::tests::validation_shader_has_only_unconditional_rendezvous ... ok
+test gpu::recomp::partition::tests::a_discard_early_out_that_narrows_through_a_whole_quad_copy_is_exact ... ok
+test gpu::recomp::partition::tests::a_dpp_row_mask_names_rows_a_half_does_not_have ... ok
+test gpu::recomp::partition::tests::a_ds_write_is_a_store ... ok
+test gpu::recomp::partition::tests::a_first_lane_index_may_differ ... ok
+test gpu::recomp::partition::tests::a_lane_count_that_reaches_an_export_may_differ ... ok
+test gpu::recomp::partition::tests::a_lane_count_that_reaches_nothing_is_exact ... ok
+test gpu::recomp::partition::tests::a_load_from_an_address_every_lane_has_gives_a_value_every_lane_has ... ok
+test gpu::recomp::partition::tests::a_mask_accumulated_behind_a_vote_is_not_stale ... ok
+test gpu::recomp::partition::tests::a_mask_used_as_a_number_may_differ ... ok
+test gpu::recomp::partition::tests::a_mask_word_moved_into_another_register_is_still_a_mask ... ok
+test gpu::recomp::partition::tests::a_mask_accumulated_from_a_vcc_wider_than_exec_is_stale ... ok
+test gpu::recomp::partition::tests::a_per_lane_select_is_not_every_lanes ... ok
+test gpu::recomp::partition::tests::a_number_combined_into_a_mask_is_mask_data ... ok
+test gpu::recomp::partition::tests::a_scalar_behind_a_vote_every_half_takes_as_the_wave_is_exact ... ok
+test gpu::recomp::partition::tests::a_scalar_condition_selected_into_a_mask_is_a_vote_every_half_takes_as_the_wave ... ok
+test gpu::recomp::partition::tests::a_save_counts_only_until_it_is_overwritten_and_only_after_it_is_made ... ok
+test gpu::recomp::partition::tests::a_scalar_written_behind_a_vote_and_read_after_the_join_may_differ ... ok
+test gpu::recomp::partition::tests::a_uniform_compare_under_a_narrowed_exec_needs_both_sides_to_keep_it ... ok
+test gpu::recomp::partition::tests::a_value_written_under_a_narrowed_exec_is_not_every_lanes ... ok
+test gpu::recomp::partition::tests::a_vcc_vote_that_narrows_exec_first_is_exact ... ok
+test gpu::recomp::partition::tests::a_vcc_vote_whose_side_runs_with_the_whole_exec_may_differ ... ok
+test gpu::recomp::partition::tests::a_vote_on_a_compare_of_values_every_lane_has_is_exact ... ok
+test gpu::recomp::partition::tests::a_vote_read_as_a_number_may_differ ... ok
+test gpu::recomp::partition::tests::a_vcc_votes_side_must_reach_the_join_with_the_votes_exec ... ok
+test gpu::recomp::partition::tests::a_vote_whose_side_widens_exec_again_may_differ ... ok
+test gpu::recomp::partition::tests::a_votes_mask_rewritten_in_its_side_no_longer_bounds_it ... ok
+test gpu::recomp::partition::tests::a_write_that_keeps_the_old_value_keeps_its_taint ... ok
+test gpu::recomp::partition::tests::an_early_out_when_every_pixel_is_discarded_is_exact ... ok
+test gpu::recomp::partition::tests::an_execz_that_does_not_skip_to_the_join_may_differ ... ok
+test gpu::recomp::partition::tests::an_if_that_narrows_exec_and_skips_to_the_join_is_exact ... ok
+test gpu::recomp::partition::tests::an_else_flip_of_the_exec_from_before_the_vote_turns_its_lanes_on ... ok
+test gpu::recomp::partition::tests::an_indirect_jump_is_not_classified ... ok
+test gpu::recomp::partition::tests::an_image_load_writes_only_the_registers_its_dmask_names ... ok
+test gpu::recomp::partition::tests::an_scc_vote_is_forgotten_when_its_mask_is_rewritten ... ok
+test gpu::recomp::partition::tests::one_lane_written_is_a_different_console_lane_in_each_half ... ok
+test gpu::recomp::partition::tests::an_scc_vote_on_a_mask_is_exact_when_its_side_narrows_exec_to_it ... ok
+test gpu::recomp::partition::tests::per_lane_code_is_exact ... ok
+test gpu::recomp::partition::tests::reading_another_lanes_value_may_differ_unless_every_lane_has_it ... ok
+test gpu::recomp::partition::tests::the_high_word_of_exec_and_a_number_in_exec_are_seen ... ok
+test gpu::recomp::partition::tests::the_lane_index_and_a_rank_may_differ ... ok
+test gpu::recomp::partition::tests::the_first_write_of_an_exec_votes_side_is_looked_at ... ok
+test gpu::recomp::partition::tests::whole_quad_mode_after_a_write_turns_on_lanes_without_it ... ok
+test gpu::recomp::partition::tests::whole_quad_mode_at_the_start_keeps_the_launch_mask ... ok
+test gpu::recomp::pso::compile_time_bench::repeated_pso_shader_compile ... ignored
+test gpu::recomp::partition::tests::work_under_an_exec_that_depends_on_the_cut_may_differ ... ok
+test gpu::recomp::pso::shader_cache_tests::direct_and_hlsl_disk_entries_are_separate ... ok
+test gpu::recomp::pso::shader_cache_tests::direct_dxil_identity_never_collides_with_hlsl ... ok
+test gpu::recomp::pso::shader_cache_tests::console_mesh_caches_hlsl_compute_pass_in_memory_and_on_disk ... ok
+test gpu::recomp::pso::shader_cache_tests::direct_dxil_identity_tracks_its_sources ... ok
+test gpu::recomp::pso::shader_cache_tests::shader_cache_bypasses_debug_overrides ... ok
+test gpu::recomp::pso::shader_cache_tests::shader_cache_checks_context_and_blob_bytes ... ok
+test gpu::recomp::pso::shader_cache_tests::shader_cache_does_not_serialize_different_compiles ... ok
+test gpu::recomp::pso::shader_cache_tests::shader_cache_evicts_old_entries_and_skips_oversized_shaders ... ok
+test gpu::recomp::pso::shader_cache_tests::shader_cache_probe_does_not_wait_for_an_in_flight_compile ... ok
+test gpu::recomp::pso::shader_cache_tests::shader_cache_retries_failed_and_deferred_compiles ... ok
+test gpu::recomp::pso::shader_cache_tests::shader_cache_skips_repeated_translation_and_disk_lookups ... ok
+test gpu::recomp::pso::shader_cache_tests::translated_identity_tracks_sources_and_dxc ... ok
+test gpu::recomp::pso::shader_cache_tests::translated_namespace_tracks_every_request_input ... ok
+test gpu::recomp::pso::shader_cache_tests::translated_v2_ignores_valid_entries_outside_its_namespace ... ok
+test gpu::recomp::pso::shader_cache_tests::translations_on_disk_need_the_same_bytes_and_identity ... ok
+test gpu::recomp::ssa::tests::a_diamond_joins_two_definitions ... ok
+test gpu::recomp::ssa::tests::a_loop_that_changes_the_register_keeps_its_phi ... ok
+test gpu::recomp::ssa::tests::a_loop_that_leaves_the_register_alone_drops_its_phi ... ok
+test gpu::recomp::ssa::tests::a_straight_line_needs_no_phi ... ok
+test gpu::recomp::ssa::tests::one_arm_defining_still_joins_with_the_value_from_before ... ok
+test gpu::recomp::ssa::tests::removing_a_phi_cascades_to_the_phis_built_on_it ... ok
+test gpu::recomp::lower_dxil::tests::per_lane_kernels_run_on_the_gpu ... ok
+test gpu::recomp::pso::shader_cache_tests::shader_cache_coalesces_concurrent_same_key_compiles ... ok
+test gpu::recomp::tests::atomic_fmin_fmax_x2_are_native_64_bit_atomics ... ok
+test gpu::recomp::tests::bench_split_wave64 ... ignored
+test gpu::recomp::tests::blob_dxc_cost ... ignored
+test gpu::recomp::tests::blob_hlsl_shape ... ignored
+test gpu::recomp::tests::atomic_fcmpswap_x2_uses_ieee_64_bit_cas ... ok
+test gpu::recomp::tests::atomic_inc_dec_x2_encoding_families ... ok
+test gpu::recomp::tests::compute_abi_survey ... ignored
+test gpu::recomp::tests::cvt_norm_f16_instructions ... ok
+test gpu::recomp::tests::div_fixup_f16_instruction ... ok
+test gpu::recomp::tests::ds_addtid_translates_with_m0_offset_and_lane_id ... ok
+test gpu::recomp::tests::ds_gds_plain_forms_are_unsupported ... ok
+test gpu::recomp::tests::ds_swizzle_modes_follow_the_isa ... ok
+test gpu::recomp::tests::dump_retail_interfaces ... ignored
+ms_6_6: Err("dxc: hlsl.hlsl:5:2: error: attribute WaveSize only allowed on compute or node shaders | [WaveSize(64)] |  ^")
+ms_6_8: Err("dxc: hlsl.hlsl:5:2: error: attribute WaveSize only allowed on compute or node shaders | [WaveSize(64)] |  ^")
+test gpu::recomp::tests::dxc_mesh_shader_probe ... ok
+test gpu::recomp::tests::dxc_time_levels ... ignored
+test gpu::recomp::tests::buffer_format_table_matches_llvm ... ok
+test gpu::recomp::tests::f64_class_compare_vopc_and_vop3 ... ok
+test gpu::recomp::tests::far_jumps_are_direct_branches ... ok
+test gpu::recomp::tests::fspx_compute_user_sgprs_from_rsrc2 ... ok
+test gpu::recomp::tests::fspx_containers_translate_and_compile ... ignored
+test gpu::recomp::tests::geometry_split_phases_with_branches_have_entry_and_exit ... ok
+test gpu::recomp::tests::geometry_wave32_rejects_cross_half_operations ... ok
+test gpu::recomp::tests::geometry_wave_path_selection_preserves_native_wave64 ... ok
+test gpu::recomp::tests::frexp_f64_instructions ... ok
+test gpu::recomp::tests::gpu_arena_partial_commit_probe ... ignored
+test gpu::recomp::tests::global_dword_addtid_address_is_saddr_plus_4_per_lane ... ok
+test gpu::recomp::tests::buffer_format_d16_packs_and_unpacks_halves ... ok
+test gpu::recomp::tests::gpu_atomic_fmin_fmax_negative_zero ... ok
+test gpu::recomp::tests::gpu_atomic_fcmpswap_x2 ... ok
+GPU: NVIDIA GeForce GTX 1080 / DXC: C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64
+test gpu::recomp::tests::gpu_atomic_fmin_fmax_x2 ... ok
+test gpu::recomp::tests::gpu_bench_really_runs ... ok
+test gpu::recomp::tests::gpu_built_bvh_nodes_match_the_cpu_node_test ... ok
+test gpu::recomp::tests::gpu_bvh64_intersect_ray_across_memory_windows_and_grazing ... ok
+test gpu::recomp::tests::gpu_bvh_triangle_types_2_and_3 ... ok
+test gpu::recomp::tests::gpu_bvh_intersect_ray ... ok
+test gpu::recomp::tests::gpu_cmp_class_f16_preserves_snan ... ok
+test gpu::recomp::tests::gpu_clamp_and_omod_per_instruction ... ok
+test gpu::recomp::tests::gpu_compute_mode_dispatch_abi ... ok
+test gpu::recomp::tests::gpu_cube_array_slices ... ok
+test gpu::recomp::tests::gpu_cvt_norm_f16_exact_rounding_and_edge_cases ... ok
+test gpu::recomp::tests::gpu_divergence_through_exec ... ok
+test gpu::recomp::tests::gpu_ds_addtid_roundtrip_and_exec_masking ... ok
+test gpu::recomp::tests::gpu_compute_tg_size_counts_a_partial_last_wave ... ok
+test gpu::recomp::tests::gpu_ds_read_destination_overlaps_address ... ok
+test gpu::recomp::tests::gpu_ds_swizzle_modes ... ok
+test gpu::recomp::tests::gpu_dword_addtid_per_lane_addresses ... ok
+test gpu::recomp::tests::gpu_ds_swizzle_and_bpermute_zero_inactive_lanes ... ok
+test gpu::recomp::tests::gpu_f32_compares_with_nan ... ok
+test gpu::recomp::tests::gpu_f16_defaults_to_round_to_nearest_even ... ok
+test gpu::recomp::tests::gpu_f64_class_compare ... ok
+test gpu::recomp::tests::gpu_f64_literal_high_word ... ok
+test gpu::recomp::tests::gpu_f64_compares_with_nan ... ok
+test gpu::recomp::tests::gpu_f64_rounding_and_conversions ... ok
+test gpu::recomp::tests::gpu_f64_roots ... ok
+test gpu::recomp::tests::gpu_float_cas_uses_ieee_equality ... ok
+test gpu::dxil::compact_tests::a_large_program_that_repeats_itself_takes_the_compact_form ... ok
+test gpu::recomp::tests::gpu_fmt_encode_int_sat_and_f16_rtz ... ok
+test gpu::recomp::tests::gpu_format_stores_atomics_global_lds ... ok
+test gpu::recomp::tests::gpu_fract_f32_edges ... ok
+test gpu::recomp::tests::gpu_fmt_encode_direct_dxil_int_sat_and_f16_rtz ... ok
+test gpu::recomp::tests::gpu_frexp_exp_f32_denorm_control_flow ... ok
+wave32: lanes 1600, ldexp checked 1297, sqrt exact 1584 / 1 ulp 16, rsq ulps 0/1/2/>2 [1584, 16, 0, 0]
+0 distinct failures
+test gpu::recomp::tests::gpu_f64_math_random ... ok
+test gpu::recomp::tests::gpu_frexp_exp_f32_denorm_initial_mode ... ok
+test gpu::recomp::tests::gpu_frexp_exp_f32_denorm_modes ... ok
+GPU without mesh shaders – skipping (Ok(false))
+SKIPPED gpu::recomp::tests::gpu_geometry_mode_es_gs_strip: no mesh shaders
+test gpu::recomp::tests::gpu_geometry_mode_es_gs_strip ... ok
+GPU without mesh shaders – skipping (Ok(false))
+SKIPPED gpu::recomp::tests::gpu_geometry_mode_es_gs_strip_with_branches: no mesh shaders
+test gpu::recomp::tests::gpu_geometry_mode_es_gs_strip_with_branches ... ok
+test gpu::recomp::tests::gpu_frexp_exp_f32_denorm_setreg ... ok
+test gpu::recomp::tests::gpu_frexp_f64_exp_and_mant ... ok
+wave32 F32: 1600 lanes x 33 compares, 0 distinct failures, 527 results that match only a flush of f32 denormals
+test gpu::recomp::tests::gpu_graphics_vs_ps_draw ... ok
+test gpu::recomp::tests::gpu_global_atomics_and_sub_dword_access ... ok
+SKIPPED gpu::recomp::tests::gpu_geometry_wave32_prefix_count_over_a_mask: no wave64
+fuzz seeds 0..500: validated 500, GPU-compared 299 (digest tails < 56 / >= 56: [265, 34])
+test gpu::dxil::fuzz_tests::fuzz_validate_and_gpu_0 ... ok
+test gpu::recomp::tests::gpu_geometry_wave32_prefix_count_over_a_mask ... ok
+test gpu::recomp::tests::gpu_image_get_resinfo_1d_array ... ok
+test gpu::recomp::tests::gpu_grouped_loads_bounds_and_inactive_lanes ... ok
+test gpu::recomp::tests::gpu_image_sample_offset ... ok
+test gpu::recomp::tests::gpu_heap_windows_reject_out_of_uma_aliasing ... ok
+test gpu::recomp::tests::gpu_ldexp_f32 ... ok
+test gpu::recomp::tests::gpu_ldexp_f64 ... ok
+test gpu::recomp::tests::gpu_images_a16_d16 ... ok
+fuzz seeds 500..1000: validated 500, GPU-compared 313 (digest tails < 56 / >= 56: [271, 42])
+test gpu::dxil::fuzz_tests::fuzz_validate_and_gpu_1 ... ok
+test gpu::recomp::tests::gpu_images_sample_load_store_atomic ... ok
+test gpu::recomp::tests::gpu_mad_nf_f16_rounds_intermediate_in_binary16 ... ok
+test gpu::recomp::tests::gpu_memory_and_exports ... ok
+GPU without mesh shaders – skipping (Ok(false))
+SKIPPED gpu::recomp::tests::gpu_mesh_mode_two_passes: no mesh shaders
+test gpu::recomp::tests::gpu_mesh_mode_two_passes ... ok
+test gpu::recomp::tests::gpu_memory_windows_above_4_gib ... ok
+test gpu::recomp::tests::gpu_memory_windows_from_the_heap ... ok
+test gpu::recomp::tests::gpu_memory_windows_reject_out_of_uma_aliasing ... ok
+test gpu::recomp::tests::gpu_nonfused_mad_and_mac_prevent_fma_contraction ... ok
+test gpu::recomp::tests::gpu_mesh_mode_reads_memory_windows ... ok
+test gpu::recomp::tests::gpu_packed_math_dots_movrel ... ok
+test gpu::recomp::tests::gpu_more_atomics_sub_dword_scratch_valu ... ok
+test gpu::recomp::tests::gpu_permlane16_wqm_and_lds_stride64 ... ok
+fuzz seeds 1500..2000: validated 500, GPU-compared 306 (digest tails < 56 / >= 56: [270, 36])
+test gpu::dxil::fuzz_tests::fuzz_validate_and_gpu_3 ... ok
+Ok("NVIDIA GeForce GTX 1080"): 32 pixels next to a helper lane; its ballot right in 32, its bit-or in 32; quads at lanes 4k in 1024 of 1024
+test gpu::recomp::tests::gpu_ps_helper_lanes_see_ballots_and_quads_are_lanes_4k ... ok
+wave64 true: 0 of 1024 pixels wrong (ddx 0, ddy 0, loop 0), first: []
+test gpu::recomp::tests::gpu_pknorm_i16_f32_nan_and_fmt_encode_snorm_ufloat ... ok
+test gpu::recomp::tests::gpu_ps_image_sample_offset_implicit_lod_between_mips ... ok
+wave64 false: 0 of 1024 pixels wrong (ddx 0, ddy 0, loop 0), first: []
+test gpu::recomp::tests::gpu_ps_masks_hold_helper_lanes_on_triangle_edges ... ok
+XCL_SAMPLE_RPF not set – skipping
+test gpu::recomp::tests::gpu_retail_vs_blit_gen_amb_cube ... ok
+test gpu::recomp::tests::gpu_rndne_f64 ... ok
+test gpu::recomp::tests::gpu_ps_exp_vm_controls_pixel_survival ... ok
+test gpu::recomp::tests::gpu_s_round_mode_controls_f16_rounding_across_modes ... ok
+fuzz seeds 1000..1500: validated 500, GPU-compared 314 (digest tails < 56 / >= 56: [270, 44])
+test gpu::dxil::fuzz_tests::fuzz_validate_and_gpu_2 ... ok
+test gpu::recomp::tests::gpu_rect_list_fullscreen_order ... ok
+test gpu::recomp::tests::gpu_rect_list_corners ... ok
+test gpu::recomp::tests::gpu_scalar_loop_and_scc ... ok
+test gpu::recomp::tests::gpu_rect_list_flat_outputs ... ok
+test gpu::recomp::tests::gpu_ps_p0_reads_flat_integer_selectors ... ok
+test gpu::recomp::tests::gpu_scalar_relative_moves ... ok
+test gpu::recomp::tests::gpu_scalar_sext_mulhi_and_vector_i24_sub_co_ci_u64_shifts ... ok
+test gpu::recomp::tests::gpu_sdwa_dpp_and_cross_lane ... ok
+xcl: D3D12: Agility SDK v620 (D:\xlc-legacy-gpu-backend\third_party\agility\build\native\bin\x64)
+test gpu::recomp::tests::gpu_safe_s_barrier_multi_warp_and_early_endpgm ... ok
+test gpu::recomp::tests::gpu_signed_bfe_arithmetic_shift ... ok
+test gpu::recomp::tests::gpu_sdwa_f16_inline_constants ... ok
+test gpu::recomp::tests::gpu_split_wave64_lane_local_masks ... ok
+wave32 F64: 1600 lanes x 33 compares, 0 distinct failures, 0 results that match only a flush of f32 denormals
+test gpu::recomp::tests::gpu_split_wave64_cross_half_operations ... ok
+test gpu::recomp::tests::gpu_static_samplers_from_constants_in_code ... ok
+test gpu::recomp::tests::gpu_tsharp_to_d3d12_resources ... ok
+test gpu::recomp::tests::gpu_split_wave64_reduction_tails ... ok
+test gpu::recomp::tests::gpu_triangle_pair_and_box16_nodes ... ok
+test gpu::recomp::tests::gpu_split_wave64_local_and_exchanged_masks_in_diverging_waves ... ok
+xcl: D3D12.X: UMA import check: ok, 1 window(s), 30080 µs
+xcl: D3D12.X: 3 sparse window(s) for the title's own memory (tiled buffers on video memory)
+xcl: D3D12.X: UMA opened (3 sparse VRAM window(s), 512 MB coherent window), window 0 buffer at VA 0x368600000
+xcl: D3D12.X: native dynamic depth bias (OPTIONS16): supported (ID3D12GraphicsCommandList9::RSSetDepthBias)
+xcl: D3D12.X: ID3D12Device16 – 104 PC methods, 21 internal slots under the guard, +64 stubs (Device, PC vtable D3D12Core.dll+0x376ed0)
+xcl: D3D12.X: backend 'real' – NVIDIA GeForce GTX 1080 (8059 MiB VRAM)
+test gpu::recomp::tests::gpu_uma_import_check_at_init ... ok
+xcl: D3D12.X: ID3D12Heap1 – 10 PC methods, 512 internal slots under the guard, +64 stubs (Heap, PC vtable D3D12Core.dll+0x3787f8)
+xcl: console descriptor heap 0xdead5ea7: 4 view slots at sparse VRAM 0x10000, shader visible
+test gpu::recomp::tests::gpu_unified_memory_arena ... ok
+test gpu::recomp::tests::gpu_v_swaprel_b32 ... ok
+xcl: [SHADER] rootsig 3cbb97be0738ab95: 212 B, format dxbc, parts [RTS0]
+xcl: D3D12.X: QueryInterface(0742a90b-c387-483f-b946-30a7e4e61458) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: ID3D12RootSignature1 – 10 PC methods, 18 internal slots under the guard, +64 stubs (RootSignature, PC vtable D3D12Core.dll+0x4599e0)
+xcl: [SHADER] cs 7ac74c6040f81983: 6052 B, format dxil, parts [SFI0,ISG1,OSG1,PSV0,STAT,HASH,DXIL]
+xcl: D3D12.X: ID3D12PipelineState1 – 10 PC methods, 8 internal slots under the guard, +64 stubs (PipelineState, PC vtable D3D12Core.dll+0x459a30)
+test gpu::recomp::tests::gpu_valu_float_and_int ... ok
+no 64-lane waves on this GPU – skipping
+SKIPPED gpu::recomp::tests::gpu_wave32_program_in_wave64_hardware: no wave64
+test gpu::recomp::tests::gpu_wave32_program_in_wave64_hardware ... ok
+xcl: D3D12.X: ID3D12CommandQueue1 – 23 PC methods, 512 internal slots under the guard, +64 stubs (CommandQueue, PC vtable D3D12Core.dll+0x3788f8)
+xcl: D3D12.X: ID3D12CommandAllocator – 9 PC methods, 512 internal slots under the guard, +64 stubs (CommandAllocator, PC vtable D3D12Core.dll+0x378b60)
+test gpu::recomp::tests::gpu_wave32_and_wave64_src_vccz_execz ... ok
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1996efdec68)
+xcl: D3D12.X: ID3D12Fence1 – 12 PC methods, 396 internal slots under the guard, +64 stubs (Fence, PC vtable D3D12Core.dll+0x379138)
+xcl: D3D12.X: ID3D12DescriptorHeap – 11 PC methods, 367 internal slots under the guard, +64 stubs (DescriptorHeap, PC vtable D3D12Core.dll+0x379228)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 512 internal slots under the guard, +64 stubs (CommandList, PC vtable D3D12Core.dll+0x45a720)
+xcl: D3D12.X: ID3D12Resource3 – 20 PC methods, 512 internal slots under the guard, +64 stubs (Resource, PC vtable D3D12Core.dll+0x378720)
+test gpu::recomp::tests::gpu_sparse_vram_descriptors_buffers_and_xmem ... ok
+test gpu::recomp::tests::gpu_split_wave64_waves_diverge ... ok
+test gpu::recomp::tests::hlsl_is_generated_for_straight_line_and_branches ... ok
+test gpu::recomp::tests::image_gather4h_is_unsupported ... ok
+test gpu::recomp::tests::image_get_resinfo_1d_array_layers_in_y ... ok
+test gpu::recomp::tests::isa_coverage ... ignored
+test gpu::recomp::tests::gpu_valu_16_and_64_bit ... ok
+test gpu::recomp::tests::mesh_layout_independent_of_group_count ... ok
+waves of [32, 32, 32, 32, 32, 32, 32, 32] pixels
+test gpu::recomp::tests::gpu_wave64_ps_whole_wave_reductions ... ok
+[31904.0, 76624.0, 1.0, 1.0] (want [31904.0, 76624.0, 1.0, 1.0])
+test gpu::recomp::tests::gpu_wave64_vs_spill_slots_and_identity ... ok
+test gpu::recomp::tests::gpu_typed_buffer_loads_and_stores ... ok
+test gpu::recomp::tests::probe_standard_swizzle_support ... ignored
+test gpu::recomp::tests::gpu_split_wave64_masks_read_whole_after_partial_writes ... ok
+test gpu::recomp::tests::mesh_split_accounts_vertex_chunks ... ok
+test gpu::recomp::tests::ps_masks_in_loops_quad_read_the_operands_not_the_compare ... ok
+test gpu::recomp::tests::raw_rdna2_listing ... ignored
+wave32 F16: 1600 lanes x 33 compares, 0 distinct failures, 0 results that match only a flush of f32 denormals
+test gpu::recomp::tests::gpu_float_compares_random ... ok
+test gpu::recomp::tests::retail_ps_gallery ... ignored
+test gpu::recomp::tests::retail_shader_cost ... ignored
+test gpu::recomp::tests::retail_swizzle_and_setpc_census ... ignored
+test gpu::recomp::tests::retail_translation_survey ... ignored
+test gpu::recomp::tests::retail_wave64_graphics_lane_census ... ignored
+test gpu::recomp::tests::retail_wave64_graphics_lane_forms ... ignored
+test gpu::recomp::tests::ps_interp_p0_preserves_bits_and_p2_converts_to_float ... ok
+test gpu::recomp::tests::round_mode_classification_and_lowering ... ok
+test gpu::recomp::tests::rect_list_gs_outputs ... ok
+test gpu::recomp::tests::mesh_split_wave64_form ... ok
+test gpu::recomp::tests::rndne_f64_instructions ... ok
+test gpu::recomp::tests::scalar_64_bit_count_scan_and_set_cluster ... ok
+test gpu::recomp::tests::scalar_bfe_64_handles_unsigned_signed_and_zero_width ... ok
+test gpu::recomp::tests::sdwa_f16_inline_constants_hlsl ... ok
+test gpu::recomp::tests::split_wave64_reduction_tail_rules ... ok
+test gpu::recomp::tests::scalar_bitcmp_64_selects_the_indexed_half ... ok
+test gpu::recomp::tests::scalar_signed_leading_bit_scans ... ok
+test gpu::recomp::tests::vs_system_values_in_isg1_registers ... ok
+test gpu::recomp::tests::wave32_src_vccz_execz_and_saveexec_b32_hlsl ... ok
+test gpu::recomp::upper_lanes::tests::a_constant_decides_an_unwritten_operand ... ok
+test gpu::recomp::upper_lanes::tests::a_dpp_shift_with_bound_ctrl_breaks_the_constant ... ok
+test gpu::recomp::upper_lanes::tests::a_whole_wave_reduction_reads_its_identity ... ok
+test gpu::recomp::upper_lanes::tests::outside_whole_wave_code_the_upper_lanes_stay_unwritten ... ok
+test gpu::recomp::upper_lanes::tests::paths_join ... ok
+test gpu::recomp::upper_lanes::tests::sdwa_cmpx_writes_exec_not_vcc ... ok
+test gpu::recomp::upper_lanes::tests::spill_slots_come_from_their_shadow ... ok
+test gpu::recomp::upper_lanes::tests::swaprel_writes_any_register ... ok
+test gpu::recomp::upper_lanes::tests::the_identity_is_only_known_while_the_mask_leaves_the_upper_lanes_out ... ok
+test gpu::recomp::x64_masks::tests::a_carry_chain_needs_no_exchange ... ok
+test gpu::recomp::x64_masks::tests::a_dispatcher_loop_left_by_its_budget_ends_the_program ... ok
+test gpu::recomp::x64_masks::tests::a_far_jump_is_a_branch_not_an_unknown_jump ... ok
+test gpu::recomp::x64_masks::tests::a_loop_left_before_its_head_overwrites ... ok
+test gpu::recomp::x64_masks::tests::a_loop_may_be_left_at_its_top ... ok
+test gpu::recomp::x64_masks::tests::a_selector_only_mask_needs_no_exchange ... ok
+test gpu::recomp::x64_masks::tests::a_selector_that_is_also_a_scalar_source_is_read_whole ... ok
+test gpu::recomp::x64_masks::tests::a_whole_read_on_one_path_or_around_a_loop_keeps_the_exchange ... ok
+test gpu::recomp::x64_masks::tests::an_sdwa_compare_into_its_sdst_leaves_vcc ... ok
+test gpu::recomp::x64_masks::tests::bench_whole_live_out ... ignored, manual release benchmark: cargo test --release --lib gpu::recomp::x64_masks::tests::bench_whole_live_out -- --ignored --nocapture
+test gpu::recomp::tests::v_swaprel_b32_uses_the_m0_relative_switch ... ok
+test gpu::recomp::x64_masks::tests::exec_is_always_exchanged ... ok
+test gpu::recomp::x64_masks::tests::nested_loop_ranges_matches_quadratic_merge_on_overlapping_intervals ... ok
+test gpu::recomp::x64_masks::tests::overwritten_before_any_whole_read ... ok
+test gpu::recomp::x64_masks::tests::read_modify_write_destinations_are_reads ... ok
+test gpu::recomp::x64_masks::tests::s_movrelsd_2_reads_from_its_base_and_overwrites_nothing ... ok
+test gpu::recomp::x64_masks::tests::scalar_reads_and_branches_keep_the_exchange ... ok
+test gpu::recomp::x64_masks::tests::scalar_relative_moves_reach_any_register_from_their_base ... ok
+test gpu::recomp::x64_masks::tests::smem_register_offsets_and_sdwa_scalar_sources_are_reads ... ok
+pixel 0, partial wave: [13920.0, 29744.0] (want [13920.0, 29744.0])
+pixel 1, partial wave: [13920.0, 29744.0] (want [13920.0, 29744.0])
+pixel 2, partial wave: [13920.0, 29744.0] (want [13920.0, 29744.0])
+pixel 16, partial wave: [13920.0, 29744.0] (want [13920.0, 29744.0])
+pixel 17, partial wave: [13920.0, 29744.0] (want [13920.0, 29744.0])
+pixel 32, partial wave: [13920.0, 29744.0] (want [13920.0, 29744.0])
+test gpu::recomp::tests::gpu_wave64_ps_spill_slots ... ok
+test gpu::shader::tests::classifies_and_lists_console_containers ... ok
+test gpu::shader::tests::classifies_containers ... ok
+test gpu::shader::tests::readable_answers_from_the_working_set_without_touching_pages ... ok
+test gpu::shader::tests::readable_rejects_garbage ... ok
+test gpu::recomp::x64_masks::tests::use_plan_matches_fallback_across_all_rdna2_instructions ... ok
+test gpu::recomp::tests::oversized_structured_code_falls_back_to_pc_blocks ... ok
+test gpu::recomp::tests::ps_exp_vm_hlsl_and_direct_dxil_codegen ... ok
+test gpu::texture::tests::invalid_cube_face_ranges_are_rejected_before_placement ... ok
+test gpu::texture::tests::invalid_mip_counts_are_rejected_before_layout_shifts ... ok
+test gpu::texture::tests::large_staging_uses_sixteen_mib_growth_steps ... ok
+test gpu::recomp::x64_masks::tests::block_liveness_matches_reference_bit_for_bit ... ok
+test gpu::recomp::tests::unary_f64_math_vop1_and_vop3 ... ok
+test gpu::texture::tests::oversized_array_depth_is_rejected_before_placement_allocation ... ok
+XCL_SAMPLE_TTPF not set – skipping
+test gpu::texture::tests::retail_ttpf_textures_detile_with_their_mip_chains ... ok
+test gpu::texture::tests::subresources_of_a_mipped_array_from_console_memory ... ok
+test gpu::texture::tests::texture_memory_spans_reject_empty_truncated_and_wrapping_addresses ... ok
+test gpu::texture::tests::upload_requires_every_resource_subresource_exactly_once ... ok
+test gpu::texture::tests::upload_subresources_are_validated_before_unsafe_copying ... ok
+large upload adapter: NVIDIA GeForce GTX 1080
+test gpu::texture::tests::gpu_upload_batches_reuse_the_queues_upload_buffer ... ok
+test gpu::texture::tests::non_array_2d_ignores_tsharp_depth_for_linear_and_tiled_uploads ... ok
+test gpu::texture::tests::one_dimensional_arrays_ignore_tsharp_height_for_linear_and_tiled_layouts ... ok
+test gpu::texture::tests::gpu_console_textures_upload_every_mip_and_slice ... ok
+test gpu::tiling::tests::linear_levels_detile_by_rows_as_by_elements ... ok
+test gpu::tiling::tests::linear_rows_are_padded_to_256_bytes ... ok
+test gpu::tiling::tests::mip_chain_levels_do_not_overlap ... ok
+test gpu::tiling::tests::mip_chain_sizes_match_retail_textures ... ok
+test gpu::tiling::tests::standard_swizzle_matches_the_retail_texture_patterns ... ok
+test gpu::tiling::tests::sw_256b_s_bytes_are_row_major ... ok
+test gpu::tiling::tests::t_sharp_bc7_layout ... ok
+test gpu::tiling::tests::thick_sizes_match_retail_volume_textures ... ok
+test gpu::tiling::tests::tile_then_detile_round_trips_with_partial_blocks ... ok
+120 of 120 programs structured (76 jumps into a loop), 0 run both ways
+test gpu::recomp::tests::jumps_to_outer_loop_heads_are_structured ... ok
+test gpu::uma::tests::a_reservation_larger_than_windows_1_and_2_leaves_window_0_room_for_descriptor_heaps ... ok
+test gpu::uma::tests::alloc_free_coalesce ... ok
+test gpu::uma::tests::arena_blocks_come_from_the_pool_when_the_title_took_the_rest ... ok
+test gpu::uma::tests::arena_cuts_blocks_into_aligned_pieces ... ok
+test gpu::uma::tests::expanded_heap_window_shaders_translate_and_validate ... ok
+test gpu::uma::tests::expanded_runtime_layout_splits_large_coherent_heaps_across_multiple_windows ... ok
+test gpu::uma::tests::runtime_layout_places_sparse_in_0_to_2_and_committed_in_3 ... ok
+test gpu::uma::tests::runtime_layout_supports_eight_and_sixteen_heap_windows ... ok
+test gpu::uma::tests::sparse_first_fit_keeps_the_range_crossing_the_lower_bound ... ok
+test gpu::uma::tests::sparse_first_fit_skips_a_window_boundary_only_when_requested ... ok
+test gpu::uma::tests::title_addresses_are_blocks_handed_out ... ok
+test gpu::uma::tests::windows_are_4_gib_apart_and_allocations_stay_inside ... ok
+test gpu::xbox::merged_es_tests::es_ending_in_setpc_is_a_program ... ok
+test gpu::xbox::tests::branch_target_after_endpgm_belongs_to_the_program ... ok
+test gpu::xbox::tests::constant_data_after_program_is_not_code ... ok
+test gpu::xbox::tests::counted_data_may_contain_endpgm_words ... ok
+test gpu::xbox::tests::falls_back_when_header_pointer_is_wrong ... ok
+test gpu::xbox::tests::gs_with_copy_shader_and_es_variant ... ok
+test gpu::xbox::tests::parses_retail_layout ... ok
+test gpu::xbox::tests::pc_shaders_are_not_xbox ... ok
+test gpu::xbox::tests::split_skips_padding_and_keeps_unknown_words ... ok
+test hle::acphal::tests::apu_address_prevents_overflow_overlap_and_rejects_null_va ... ok
+test hle::acphal::tests::apu_memory_maps_both_ways ... ok
+test hle::acphal::tests::channel_acknowledges_and_ticks ... ok
+xcl: xapu: decoder connected (process 1, 2 streams) – Opus packets are decoded (silence without an Opus decoder)
+xcl: xapu: 0 Opus packets decoded (0 errors), 0 frames, 0 non-zero samples
+test hle::acphal::tests::decoder_returns_silence ... ok
+test hle::acphal::tests::reconnect_drops_messages_queued_for_the_old_channel ... ok
+xcl: acphal: SHAPE contexts [2, 0, 0, 0, 0] (they do not run: no audio from the console's mixer)
+xcl: acphal: SHAPE contexts [3, 0, 0, 0, 0] (they do not run: no audio from the console's mixer)
+test hle::acphal::tests::shape_contexts_overflow_and_partial_failure_roll_back ... ok
+xcl: acphal: DSP connected (128 streams) – its commands are taken, nothing runs
+xcl: acphal: first DSP command (128 streams) – taken, not run
+test hle::acphal::tests::the_dsp_connects_and_takes_commands ... ok
+test hle::acphal::tests::xapu_connect_returns_oom_and_cleans_up_on_failure ... ok
+test hle::bcpack::tests::bc7_dictionary_indices_line_up ... ok
+test hle::bcpack::tests::fixtures_decode_to_their_lanes ... ok
+test hle::bcpack::tests::junk_streams_do_not_panic ... ok
+test hle::bcpack::tests::model_matches_the_patent_excerpt ... ok
+test hle::bcpack::tests::only_published_modes_decode ... ok
+test hle::bcpack::tests::truncated_and_empty_streams_fail ... ok
+test hle::bink::tests::bink_header_abi_offsets ... ok
+xcl: Bink: skipping movie #1 (1920x1080, 600 frames, 29.97 fps, ~20.0 s, flags 0x0)
+xcl: Bink: skipping movie #2 (0x0, 300 frames, 0.00 fps, ~0.0 s, flags 0x80)
+test hle::bink::tests::fast_advance_respects_loop_flag_and_mode ... ok
+test hle::bink::tests::mode_and_dll_matching ... ok
+xcl: Bink: XCL_SKIP_BINK=non-looping – fast-advancing Bink 2 movies
+test hle::bink::tests::wrap_only_intercepts_known_exports_when_enabled ... ok
+xcl: D3D12.X: 1 allocator resets so far with recordings still held or on the GPU – another PC allocator took its place (1 made, 1 put aside now)
+xcl: D3D12.X: 2 allocator resets so far with recordings still held or on the GPU – another PC allocator took its place (1 made, 1 put aside now)
+test hle::d3d12x::alloc_pool::tests::a_recording_outlives_the_reset_of_the_titles_allocator ... ok
+xcl: D3D12.X: 1 allocator resets so far with recordings still held or on the GPU – another PC allocator took its place (0 made, 1 put aside now)
+test hle::d3d12x::alloc_pool::tests::a_spare_whose_reset_fails_stays_available_for_retry ... ok
+test hle::d3d12x::alloc_pool::tests::released_lists_leave_only_live_recordings_and_gpu_work_holding_the_backing ... ok
+xcl: D3D12.X: pipelines whose shaders are not compiled yet get a stand-in and are built in the background
+xcl: D3D12.X: ExecuteIndirect that changes root arguments with a translated pipeline skipped
+xcl: D3D12.X: Dispatch with a pipeline that has no translated console shader (0x72000003) skipped
+xcl: D3D12.X: ExecuteIndirect dispatch with a pipeline that has no translated console shader (0x72000003) skipped
+test hle::d3d12x::bind::tests::async_compute_pso_success_and_failure_in_dispatch_and_execute_indirect ... ok
+test gpu::tiling::tests::every_thick_pattern_is_a_permutation_of_its_block ... ok
+xcl: [SHADER] rootsig 900349563f559343: 68 B, format dxbc, parts [RTS0]
+xcl: [SHADER] cs 94cef5df73e3350d: 388 B, format dxbc, parts [RDEF,ISGN,OSGN,SHEX,STAT]
+xcl: [SHADER] rootsig f5ef1dcb3ee4cad0: 3668 B, format dxil, parts [SFI0,ISG1,OSG1,PSV0,RTS0,STAT,HASH,DXIL]
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1996efde258)
+test hle::d3d12x::bind::tests::create_list_reset_and_clear_state_track_initial_pso_on_d3d12 ... ok
+test hle::d3d12x::bind::tests::execute_indirect_with_a_pipeline_still_building_is_skipped ... ok
+test hle::d3d12x::bind::tests::rect_lists_with_the_rect_list_gs_are_not_expanded_on_the_cpu ... ok
+xcl: D3D12.X: ID3D12CommandSignature – 8 PC methods, 328 internal slots under the guard, +64 stubs (CommandSignature, PC vtable D3D12Core.dll+0x379378)
+test hle::d3d12x::bind::tests::reset_and_clear_state_track_initial_pso_and_clear_root_args ... ok
+test hle::d3d12x::console_heap::tests::a_freed_range_at_the_cursor_continues_into_the_never_used_tail ... ok
+xcl: console descriptor heaps: one shader-visible PC heap of 1000000 view descriptors for all of them
+xcl: console descriptor heap 0xb000: 73727 view slots at sparse VRAM 0x10000, shader visible
+xcl: console descriptor heap 0xb001: 73727 view slots at sparse VRAM 0x250000, shader visible
+xcl: console descriptor heap 0xb002: 73727 view slots at sparse VRAM 0x490000, shader visible
+xcl: console descriptor heap 0xb003: 73727 view slots at sparse VRAM 0x6d0000, shader visible
+xcl: console descriptor heap 0xb004: 73727 view slots at sparse VRAM 0x910000, shader visible
+xcl: console descriptor heap 0xb005: 73727 view slots at sparse VRAM 0xb50000, shader visible
+xcl: console descriptor heap 0xb006: 73727 view slots at sparse VRAM 0xd90000, shader visible
+xcl: console descriptor heap 0xb007: 73727 view slots at sparse VRAM 0xfd0000, shader visible
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19967597d28)
+xcl: console descriptor heap 0xb100: 4 view slots at sparse VRAM 0x10000, shader visible
+xcl: console descriptor heap 0xb101: 4 view slots at sparse VRAM 0x20000, shader visible
+test hle::d3d12x::console_heap::tests::large_heaps_get_shared_pages_as_used ... ok
+test hle::d3d12x::console_heap::tests::released_ranges_touching_one_another_merge_into_one ... ok
+test hle::d3d12x::console_heap::tests::shared_heap_ranges ... ok
+xcl: console descriptor heap 0xa1: 4 view slots at sparse VRAM 0x10000, shader visible
+xcl: console descriptor heap 0xa2: 2 sampler slots at sparse VRAM 0x20000, shader visible
+test hle::d3d12x::console_heap::tests::slots_copy_and_release ... ok
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 512 internal slots under the guard, +64 stubs (CommandList, PC vtable D3D12Core.dll+0x45ad40)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19967596908)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19967597318)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19967598738)
+test hle::d3d12x::console_heap::tests::window_views_do_not_hold_global_during_device_calls ... ok
+test hle::d3d12x::console_heap::tests::zero_tsharp_does_not_reach_window_views ... ok
+test hle::d3d12x::console_list::tests::a_huge_constant_count_has_no_layout ... ok
+xcl: sparse windows: 16 submits, 0 MB of CPU writes uploaded, 14 ms spent, 0 tiles mapped
+xcl: sparse windows timing: write-watch 0 ms (5 dirty pages), lock wait 0 ms, chunk scan 0 ms, upload 13 ms (7 runs)
+test hle::d3d12x::console_list::tests::a_shader_with_four_user_sgprs_takes_every_argument_from_the_table ... ok
+test hle::d3d12x::console_list::tests::arguments_that_fit_go_in_user_sgprs ... ok
+test hle::d3d12x::console_list::tests::graphics_arguments_go_in_user_sgprs_from_s8 ... ok
+test hle::d3d12x::console_list::tests::layout_packs_parameters_in_order ... ok
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1996fbf9ed8)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1996fbfc718)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1996fbfa8e8)
+xcl: sparse windows: 32 submits, 0 MB of CPU writes uploaded, 14 ms spent, 0 tiles mapped
+xcl: sparse windows timing: write-watch 0 ms (5 dirty pages), lock wait 0 ms, chunk scan 0 ms, upload 13 ms (7 runs)
+xcl: D3D12.X: bottom-of-pipe writes outside unified memory are done by the CPU after the GPU (1 in the first submission)
+test hle::d3d12x::cpu_writes::tests::readback_u64_lands_after_the_queue ... ok
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19970f745c8)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19970f74fd8)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19970f731a8)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19970f759e8)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19970f78228)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19970f78c38)
+xcl: sparse windows: 64 submits, 0 MB of CPU writes uploaded, 14 ms spent, 0 tiles mapped
+xcl: sparse windows timing: write-watch 0 ms (5 dirty pages), lock wait 0 ms, chunk scan 0 ms, upload 13 ms (7 runs)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19970f763f8)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19970f76e08)
+test hle::d3d12x::cpu_writes::tests::writes_land_after_the_queue ... ok
+test hle::d3d12x::device_x::tests::allocation_info_of_several_is_padded_to_the_largest_alignment ... ok
+test hle::d3d12x::device_x::tests::console_depth_buffers_and_their_views_are_the_pcs ... ok
+test hle::d3d12x::device_x::tests::console_types_and_descs_become_pc_ones ... ok
+test hle::d3d12x::device_x::tests::depth_bias_patches_rasterizer_fields ... ok
+test hle::d3d12x::device_x::tests::depth_buffers_created_for_unordered_access_start_as_depth ... ok
+test hle::d3d12x::device_x::tests::derived_pipeline_patches_land_on_the_desc_parts ... ok
+test hle::d3d12x::bind::tests::execute_indirect_reads_the_arguments_written_before_it ... ok
+test hle::d3d12x::device_x::tests::page_pools_register_once_and_unregister ... ok
+test hle::d3d12x::device_x::tests::gpu_depth_buffer_created_for_unordered_access_is_placed ... ok
+test hle::d3d12x::fence_x::tests::the_cell_follows_the_fence ... ok
+test hle::d3d12x::frame::tests::console_intervals_and_deadlines ... ok
+test hle::d3d12x::frame::tests::interval_override_parsing_and_clamping ... ok
+xcl: D3D12.X: frame interval 16667 µs (periodicity 1, flags 0x0)
+xcl: D3D12.X: SetFrameIntervalX(16000 µs) – not an interval of this display
+test hle::d3d12x::frame::tests::origin_events_issue_tokens_and_flips_have_statistics ... ok
+test hle::d3d12x::frame::tests::a_woken_wait_takes_the_origin_that_woke_it ... ok
+xcl: trace: unit!original ← xcl-a2e682ac6d85a3c8.exe+0xb4ce2: (0x1, 0x2, 0x3, 0x4, 0x5, 0x4018000000000000) → 0x9fbf1
+xcl: trace: unit!halves ← xcl-a2e682ac6d85a3c8.exe+0xb4daf: (0x1, 0x2, 0x3, 0x4, 0x5, 0x4018000000000000) → 0x9fbf1
+test hle::d3d12x::guard::tests::call_tracer_forwards_arguments_and_results ... ok
+test hle::d3d12x::guard::tests::guard_forwards_calls_that_do_not_come_from_a_game_image ... ok
+test hle::d3d12x::guard::tests::layout_split_keeps_the_runtime_on_the_pc_method ... ok
+test hle::d3d12x::guard::tests::split_sends_non_game_callers_to_the_pc_method ... ok
+test hle::d3d12x::frame::tests::statistics_name_each_frames_origin_and_rescheduled_handles_outlive_the_clock_tick ... ok
+test hle::d3d12x::late_release::tests::without_queues_a_batch_goes_at_once ... ok
+test hle::d3d12x::layout::tests::known_slots_and_chains ... ok
+xcl: D3D12.X: test vertex buffer at 0x19921d10100 (1024 bytes) is outside unified memory – 0x19921d10000..0x19921d20000 mirrored at 0x420010000, each draw copies what it reads (1 mirrors, 0 MB)
+test hle::d3d12x::list_x::tests::a_mirrored_buffer_binds_its_mirror_without_asking_readable ... ok
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1996f620d88)
+test hle::d3d12x::list_x::tests::a_new_list_takes_no_copy_scratch_of_an_earlier_one ... ok
+test hle::d3d12x::late_release::tests::a_held_resource_goes_when_the_queue_is_past_its_batch ... ok
+test hle::d3d12x::list_x::tests::an_internal_wait_is_listed_until_its_fence_reaches_the_value ... ok
+test gpu::tiling::tests::volume_levels_do_not_overlap ... ok
+test hle::d3d12x::list_x::tests::copy_scratch_budget_counts_resources_until_gpu_completion ... ok
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1997353e588)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1997353ef98)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1997353f9a8)
+xcl: D3D12.X: Wait64BitValueX at 0x19966e59970 >= 0x702 bridged to GPU queue.Wait (waiter=q1/ty2, prod=qNone/tySome(0); wait-before-signal, after_write64=false)
+xcl: D3D12.X: Wait64BitValueX at 0x19966e59970 >= 0x702 bridged to GPU queue.Wait (waiter=q1/ty2, prod=qNone/tySome(0); wait-before-signal, after_write64=false)
+xcl: D3D12.X: Write64 Signal at 0x19966e59970 = 0x702 on q2/ty0 would close a GPU cycle (waiters=[q1]) – signalled on CPU
+test hle::d3d12x::list_x::tests::cross_queue_cycle_and_same_queue_fifo_do_not_deadlock ... ok
+xcl: D3D12.X: native dynamic depth bias (OPTIONS16): supported (ID3D12GraphicsCommandList9::RSSetDepthBias)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1997380c0e8)
+test hle::d3d12x::list_x::tests::depth_bias_native_list9_and_bundle_fallback ... ok
+test hle::d3d12x::list_x::tests::depth_bias_native_path_exact_f32_and_list9_fallback ... ok
+test hle::d3d12x::list_x::tests::depth_bias_state_tracks_fallback_and_clear ... ok
+xcl: D3D12.X: draw with a translated pipeline skipped: no XCL ABI root signature
+xcl: D3D12.X: DrawIndexedX: index format 62 – not done
+test hle::d3d12x::list_x::tests::draw_indexed_x_routes_through_bind_and_restores_index_buffer ... ok
+test hle::d3d12x::list_x::tests::execute_with_waits_splits_batches_before_unsatisfied_list ... ok
+test hle::d3d12x::list_x::tests::fill_patterns_repeat_the_value ... ok
+test hle::d3d12x::list_x::tests::kickoff_x_render_targets_preserve_mrt_count_for_single_descriptor_range ... ok
+test hle::d3d12x::list_x::tests::cpu_watchdog_signal_with_inflight_gpu_signal_completes_cleanly ... ok
+test hle::d3d12x::list_x::tests::nested_occlusion_queries_end_the_outer_one_early ... ok
+test hle::d3d12x::list_x::tests::pending_wait_32_and_64_bit_with_mask_and_cross_thread_signal ... ok
+xcl: D3D12.X: Wait64BitValueX at 0x1996f905d20 >= 0x677 bridged to GPU queue.Wait (waiter=q3/ty0, prod=qNone/tySome(2); wait-before-signal, after_write64=false)
+xcl: D3D12.X: Wait64BitValueX at 0x1996f905d20 >= 0x677 bridged to GPU queue.Wait (waiter=q3/ty0, prod=qNone/tySome(2); wait-before-signal, after_write64=false)
+test hle::d3d12x::list_x::tests::pipelined_next_frame_write_is_not_false_cycle ... ok
+test hle::d3d12x::list_x::tests::cross_queue_wait64_before_signal_does_not_deadlock_submit_thread ... ok
+test hle::d3d12x::list_x::tests::queue_picking_prefers_last_queue_and_respects_release ... ok
+test hle::d3d12x::list_x::tests::reset_commits_state_only_after_native_success_and_always_restores_vtable ... ok
+test hle::d3d12x::list_x::tests::resolve_query_data_applies_buffer_delta_to_pc_resolve_and_occlusion_writeback ... ok
+xcl: D3D12.X: SetPredicationBufferX: unsupported command list type 1 – not done
+xcl: D3D12.X: SetPredicationBufferX: unsupported command list type 3 – not done
+xcl: D3D12.X: SetPredicationBufferX: descriptor 0x1 is not readable – not done
+xcl: D3D12.X: SetPredicationBufferX: unknown predication op 2 – not done
+test hle::d3d12x::list_x::tests::set_predication_buffer_state_transitions_and_lifecycle ... ok
+test hle::d3d12x::list_x::tests::sync_watchdog_pair_is_set_before_the_thread_starts ... ok
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x199251ca468)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x199251c8638)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x199251c9a58)
+xcl: D3D12.X: split command list (type 2) around mid-list Wait after Write64 (#1)
+xcl: D3D12.X: Wait64BitValueX at 0x19966e598e0 >= 0x1 bridged to GPU queue.Wait (waiter=q4/ty2, prod=qNone/tySome(0); wait-before-signal, after_write64=false)
+xcl: D3D12.X: Wait64BitValueX at 0x19966e598e0 >= 0x1 bridged to GPU queue.Wait (waiter=q4/ty2, prod=qNone/tySome(0); wait-before-signal, after_write64=false)
+xcl: D3D12.X: 4 allocator resets so far with recordings still held or on the GPU – another PC allocator took its place (2 made, 1 put aside now)
+xcl: D3D12.X: split command list (type 2) around mid-list Wait after Write64 (#2)
+xcl: D3D12.X: Wait64BitValueX at 0x19966e598e0 >= 0x2 bridged to GPU queue.Wait (waiter=q4/ty2, prod=qSome(5)/tySome(0); wait-before-signal, after_write64=false)
+xcl: D3D12.X: Wait64BitValueX at 0x19966e598e0 >= 0x2 bridged to GPU queue.Wait (waiter=q4/ty2, prod=qSome(5)/tySome(0); wait-before-signal, after_write64=false)
+test hle::d3d12x::list_x::tests::mid_list_write64_wait64_split_avoids_cycle_and_reuses_spares ... ok
+test hle::d3d12x::list_x::tests::unbinding_all_heaps_lets_the_shared_heap_be_bound_again ... ok
+test hle::d3d12x::list_x::tests::wait_comparison_ops_cover_all_d3d12_funcs ... ok
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x199732f53d8)
+xcl: D3D12.X: Write64BitValueBottomOfPipeX: 0x199672fcd34 is not 8-byte aligned – not done
+xcl: D3D12.X: Write64BitValueBottomOfPipeX: 0x0 is not in unified memory – not done
+xcl: D3D12.X: ID3D12QueryHeap – 8 PC methods, 348 internal slots under the guard, +64 stubs (QueryHeap, PC vtable D3D12Core.dll+0x3792d8)
+test hle::d3d12x::list_x::tests::timestamps_outside_unified_memory_land_after_the_queue ... ok
+test hle::d3d12x::list_x::tests::written_ranges_detect_same_list_overlap ... ok
+test hle::d3d12x::null::tests::a_stream_ending_inside_a_shader_payload_is_not_read_past_its_end ... ok
+xcl: D3D12.X: creating a FALLBACK DEVICE (null device) – graphics are not rendered in milestone M1
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19970e59558)
+xcl: [STUB] d3d12_xs.dll!ID3D12Device::#200 first called from xcl-a2e682ac6d85a3c8.exe+0xbf1657 → returning 0x0
+test hle::d3d12x::null::tests::device_queue_fence_resource_roundtrip ... ok
+test hle::d3d12x::null::tests::heap_start_handles_come_back_in_rax ... ok
+test hle::d3d12x::null::tests::struct_returning_methods_take_the_buffer_first_or_second ... ok
+xcl: D3D12.X: Write64 Signal at 0x19964c8bc60 = 0x6a0 on q6/ty2 would close a GPU cycle (waiters=[q6]) – signalled on CPU
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1996f6235c8)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1996f620378)
+xcl: D3D12.X: Write64 at 0x19964c8bba0 became non-monotonic (0x5 < submitted 0xa) – released armed GPU waits up to 0x14 on CPU
+test hle::d3d12x::present::frame_dump_tests::mapped_frame_dump_distinguishes_dark_bright_and_undecoded_content ... ok
+test hle::d3d12x::present::frame_dump_tests::reports_without_frame_dumps_remain_readable ... ok
+test hle::d3d12x::present::tests::frame_rate_reports_stalls_and_recovery ... ok
+test hle::d3d12x::present::tests::frame_rate_uses_frame_and_time_deltas ... ok
+test hle::d3d12x::list_x::tests::rotating_queue_self_deadlock_and_non_monotonic_rescue_do_not_hang ... ok
+test hle::d3d12x::present::tests::frame_rate_waits_for_a_full_sample ... ok
+xcl: window_pos: expected "auto", "center" or "x,y", got "nonsense" – using auto
+xcl: window_pos: expected "auto", "center" or "x,y", got "12,abc" – using auto
+test hle::d3d12x::present::tests::window_position_modes ... ok
+test hle::d3d12x::pso_async::used_tests::a_bind_waiting_for_a_build_holds_the_title ... ok
+xcl: D3D12.X: 1 pipelines built ahead of their first use
+test hle::d3d12x::list_x::tests::write_buffer_immediate_on_open_existing_heap_visible_to_cpu ... ok
+test hle::d3d12x::pso_async::used_tests::a_pipeline_an_earlier_run_used_is_built_ahead_of_its_first_use ... ok
+test hle::d3d12x::pso_async::used_tests::a_waiting_bind_makes_the_build_wanted ... ok
+test hle::d3d12x::pso_async::used_tests::the_keys_of_a_file_are_read_and_other_lines_passed_over ... ok
+test hle::d3d12x::pso_async::used_tests::a_waiting_bind_makes_the_builds_compiles_wanted ... ok
+test hle::d3d12x::real::big_compile_tests::env_counts_parse ... ok
+test hle::d3d12x::real::big_compile_tests::giant_driver_compiles_have_their_own_lane ... ok
+test hle::d3d12x::real::big_compile_tests::headroom_is_the_3_gb_floor_until_512_times_the_dxil_exceeds_it ... ok
+test hle::d3d12x::real::big_compile_tests::only_a_cold_compute_compile_takes_a_slot ... ok
+test hle::d3d12x::real::big_compile_tests::only_huge_compiles_get_a_gate_note ... ok
+xcl: D3D12.X: driver compile start #2: test PSO, 4194303 B DXIL
+xcl: D3D12.X: driver compile finish #2: test PSO, 4194303 B DXIL, 0 ms, huge, ungated here (a title thread's, cached, or gated by its caller)
+xcl: D3D12.X: driver compile start #3: test PSO, 9223372036854775807 B DXIL
+xcl: D3D12.X: driver compile finish #3: test PSO, 9223372036854775807 B DXIL, 0 ms, huge, ungated here (a title thread's, cached, or gated by its caller)
+test hle::d3d12x::real::big_compile_tests::small_and_title_thread_compiles_bypass_the_gate ... ok
+test hle::d3d12x::real::big_compile_tests::the_concurrency_limit_holds_and_all_finish ... ok
+xcl: D3D12.X: a pipeline still being built after 30 ms: its binds go on without it until it is built (1 so far)
+test gpu::tiling::tests::every_pattern_is_a_permutation_of_its_block ... ok
+test hle::d3d12x::real::cache_report_tests::reports_without_dxil_cache_statistics_still_deserialize ... ok
+test hle::d3d12x::real::compute_blob_tests::a_blob_is_found_only_for_the_same_program_root_signature_and_flags_and_is_forgotten ... ok
+test hle::d3d12x::real::console_format_query_tests::console_formats_are_asked_as_the_pcs ... ok
+test hle::d3d12x::real::console_format_query_tests::gpu_console_depth_formats_are_supported ... ok
+test hle::d3d12x::real::console_format_query_tests::gpu_console_format_allocation_info_is_sane ... ok
+xcl: D3D12.X: CreatePlacedResource(dimension 3, 256x256, format 118, layout 0x0, flags 0x2, state 0x10) at 0x0 refused (0x80070057); the PC's way: 0x0 (heap 0x1000000 bytes, PC size 0x40000)
+test hle::d3d12x::real::console_format_query_tests::gpu_placed_console_depth_target_with_clear_value ... ok
+test hle::d3d12x::real::dred_tests::a_late_partially_executed_list_is_reported_before_unstarted_lists ... ok
+test hle::d3d12x::real::driver_cache::tests::a_file_is_named_after_its_dxil_and_flags ... ok
+xcl: D3D12.X: 1 driver blobs kept on disk for the next run (this one: 1000 ms, 0 KB)
+xcl: D3D12.X: 1 compute pipelines made from the driver's blob of an earlier run (kept on disk)
+xcl: D3D12.X: a driver blob kept on disk was refused (another driver or adapter?) – such pipelines are compiled again
+test hle::d3d12x::real::driver_cache::tests::a_kept_blob_is_read_back_and_a_refused_one_is_dropped ... ok
+test hle::d3d12x::real::driver_cache::tests::an_abandoned_staging_file_is_skipped_and_preserved ... ok
+test hle::d3d12x::real::driver_cache::tests::an_overlapping_writer_cannot_modify_the_published_blob ... ok
+test hle::d3d12x::real::fallback_stream_tests::a_stream_counts_referenced_shader_code_not_its_descriptors ... ok
+test hle::d3d12x::real::fallback_stream_tests::a_stream_ending_inside_a_payload_is_not_rewritten ... ok
+test hle::d3d12x::real::graphics_blob_tests::graphics_blob_key_ignores_struct_padding_bytes ... ok
+test hle::d3d12x::real::graphics_blob_tests::graphics_blob_key_tracks_shaders_samplers_and_state ... ok
+xcl: D3D12.X: console shaders in the PSO without a translation: the driver rejected the PSO with the rect list GS (0x80070057): rect list drawn as triangles
+test hle::d3d12x::real::graphics_blob_tests::rect_list_gs_fallback_does_not_cache_under_with_gs_key ... ok
+test hle::d3d12x::real::graphics_blob_tests::stale_cached_graphics_blob_preserves_rect_list_gs_on_retry ... ok
+test hle::d3d12x::real::graphics_blob_tests::valid_cached_graphics_blob_reuses_without_retry ... ok
+xcl: D3D12.X: Map of a resource not in unified memory → 0x80070057 (Some((1, 65536, 1, 0, 0)))
+test hle::d3d12x::real::map_tests::only_resources_with_cpu_pages_go_to_the_pc_map ... ok
+test hle::d3d12x::real::map_tests::stream_pipeline_defaults_depth_enable_from_dsv_format ... ok
+SKIPPED hle::d3d12x::real::passthrough_mesh_stream_accepts_a_triangle_driver_blob: no mesh shaders
+test hle::d3d12x::real::passthrough_mesh_stream_accepts_a_triangle_driver_blob ... ok
+xcl: D3D12.X: queue #18 before the title's first Signal / Wait: the queue layout is not known yet, GetDesc writes only its first 8 bytes
+test hle::d3d12x::real::queue_tests::queue_slot_18_before_the_layout_is_known_writes_8_bytes ... ok
+test hle::d3d12x::real::readback_routing_tests::coherent_buffer_sanitizes_console_flags_and_state ... ok
+xcl: console descriptor heap 0x5555dead: 4 view slots at sparse VRAM 0x10000, CPU only
+test hle::d3d12x::real::readback_routing_tests::copy_descriptors_remaps_xbox_extra_cbv_srv_uav_to_pc_enum ... ok
+test hle::d3d12x::real::readback_routing_tests::custom_write_back_only_stays_coherent_for_small_copy_dest_buffers ... ok
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (DmaList, PC vtable 0x199251c9a58)
+test hle::d3d12x::real::readback_routing_tests::dma_list_release_cleans_up_list_state ... ok
+test hle::d3d12x::real::rect_list_pso_tests::a_refused_rect_list_gs_is_retried_without_it ... ok
+test hle::d3d12x::real::rect_list_pso_tests::pipelines_with_the_rect_list_gs_are_known_until_forgotten ... ok
+test hle::d3d12x::real::rect_list_pso_tests::untranslated_stream_rect_lists_get_the_pcs_topology_type ... ok
+test hle::d3d12x::real::shaders_key_tests::a_key_follows_the_shaders_and_their_order_and_is_never_zero ... ok
+test hle::d3d12x::real::srv_tests::a_cube_view_becomes_the_cube_array_of_one_cube ... ok
+test hle::d3d12x::real::srv_tests::a_default_view_of_a_depth_buffer_matches_its_sample_count_and_array_size ... ok
+test hle::d3d12x::real::this_first_tests::a_return_buffer_with_a_stale_vtable_copy_is_not_the_object ... ok
+test hle::d3d12x::real::two_pass_identity::tests::canonical_stream_key_distinguishes_state_samplers_and_driver ... ok
+test hle::d3d12x::real::two_pass_identity::tests::canonical_stream_key_normalizes_padding_and_rejects_pointer_subobjects ... ok
+test hle::d3d12x::real::two_pass_identity::tests::two_pass_cs_key_changes_with_samplers_and_driver ... ok
+test hle::d3d12x::real::two_pass_identity::tests::two_pass_keys_cover_mem_windows_invalid_counts_and_duplicates ... ok
+test hle::d3d12x::real::big_compile_tests::unwanted_builds_go_one_at_a_time_when_the_commit_is_there ... ok
+test hle::d3d12x::sparse::tests::a_buffer_released_while_the_state_is_held_does_not_wait_for_it ... ok
+xcl: D3D12.X: CreateShaderCacheSession failed on the PC runtime (0x80070057) – using an in-memory session
+test hle::d3d12x::shader_cache_session::tests::rejected_create_shader_cache_session_falls_back_to_working_in_memory_session ... ok
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x19925a4f2d8)
+test hle::d3d12x::sparse::tests::a_pool_retired_a_moment_ago_is_taken_back ... ok
+test hle::d3d12x::sparse::tests::a_tile_decommitted_and_committed_again_keeps_its_video_memory ... ok
+test hle::d3d12x::sparse::tests::aligned_tile_addresses_spread_across_hash_buckets ... ok
+test hle::d3d12x::sparse::tests::decommit_sub_tile_reclaims_pool_tile_when_all_pages_become_holes ... ok
+test hle::d3d12x::sparse::tests::early_commit_timing ... ignored
+test hle::d3d12x::sparse::tests::a_freed_block_is_decommitted_before_its_address_is_reused ... ok
+test hle::d3d12x::real::big_compile_tests::a_wanted_build_waits_for_neither_the_slot_nor_the_commit ... ok
+test hle::d3d12x::sparse::tests::early_decommit_of_one_page_keeps_the_rest ... ok
+test hle::d3d12x::sparse::tests::early_commits_match_the_old_list_for_page_entries ... ok
+test hle::d3d12x::sparse::tests::only_changed_chunks_are_sent ... ok
+test hle::d3d12x::sparse::tests::query_tile_holes_detects_reserved_noaccess_and_committed_pages ... ok
+test hle::d3d12x::sparse::tests::ring_planner_handles_wrap_and_large_chunks ... ok
+test hle::d3d12x::sparse::tests::scan_page_lazy_alloc_and_coalesce ... ok
+test hle::d3d12x::sparse::tests::the_queue_is_answered_while_the_state_is_locked ... ok
+test hle::d3d12x::title_list::tests::console_list_objects_have_no_room_and_forward_to_the_pc_list ... ok
+test hle::d3d12x::sparse::tests::ensure_mapped_with_query_holes_skips_uncommitted_pages_on_readback ... ok
+xcl: kernelx: reservation 0x19940890000 (0x1000000 bytes, no CPU access) is the GPU view of 0x1993f890000
+test hle::d3d12x::title_textures::tests::a_lazily_mapped_page_in_a_gpu_view_is_its_own_source ... ok
+test hle::d3d12x::title_textures::tests::a_batch_detiled_on_several_threads_matches_one_thread ... ok
+test hle::d3d12x::title_textures::tests::batch_fits_caps_items_bytes_and_device ... ok
+xcl: kernelx: reservation 0x19f7fcf0000 (0x600000000 bytes, no CPU access) is the GPU view of 0x1997fcf0000
+xcl: D3D12.X: a texture at 0x19f7fd10000 lies in a GPU view of the title's CPU memory: kept in step with 0x1997fd10000 (1 so far)
+test hle::d3d12x::title_textures::tests::gpu_mirror_upload_follows_cpu_writes_and_later_mapping_changes ... ok
+test hle::d3d12x::title_textures::tests::overlapping_placements_retire_superseded_entries ... ok
+SKIPPED placed_title_textures_share_vram_and_preserve_pixels: tiled tier < 2
+test hle::d3d12x::title_textures::tests::placed_title_textures_share_vram_and_preserve_pixels ... ok
+test hle::d3d12x::title_textures::tests::read_committed_copies_committed_pages_and_zeroes_gaps ... ok
+test hle::d3d12x::title_textures::tests::a_texture_with_unchanged_memory_is_left_out_until_it_is_forgotten ... ok
+test hle::d3d12x::title_textures::tests::title_bytes_are_used_in_place_when_all_are_readable ... ok
+test hle::d3d12x::title_textures::tests::transitions_apply_when_their_list_is_submitted ... ok
+test hle::d3d12x::title_textures::tests::transitions_per_subresource_and_back_to_one_state ... ok
+test hle::d3d12x::title_textures::tests::watch_ranges_clip_and_merge ... ok
+test hle::d3d12x::title_textures::tests::written_pages_past_a_full_buffer_are_all_found_once ... ok
+test hle::d3d12x::vram::tests::an_arena_is_shared_at_its_addresses_and_otherwise_its_placements_size ... ok
+test hle::d3d12x::vram::tests::an_arena_no_resource_uses_goes_after_two_seconds ... ok
+test hle::d3d12x::vram::tests::churn_update_tile_mappings_timing ... ignored
+test hle::d3d12x::vram::tests::d32s8_targets_take_their_own_size_of_video_memory ... ok
+test hle::d3d12x::pso_async::used_tests::a_bind_waits_for_a_slow_pipeline_no_longer_than_its_budget ... ok
+test hle::d3d12x::vram::tests::owned_pages_never_alias_disjoint_ranges ... ok
+test hle::d3d12x::vram::tests::packed_console_3d_mip_tails_use_the_detile_upload_path ... ok
+test hle::d3d12x::vram::tests::reservable_agrees_with_the_driver ... ok
+test hle::d3d12x::vram::tests::reserved_needs_tiled_format_and_tiled_msaa ... ok
+test hle::d3d12x::vram::tests::streamed_targets_stay_bounded ... ok
+test hle::d3d12x::vram::tests::tile_pool_keeps_churned_allocations_in_single_heap_and_contiguous ... ok
+test hle::d3d12x::vram::tests::tile_ranges_per_heap ... ok
+xcl: DirectStorage: EnqueueRequest: refused (0x89240030): Request { options: 4, destination: 19925f64400, destination_page_offset: 0, destination_size: 10000, source: 19925acff50, offset: 0, source_page_offset: 0, source_size: 55, intermediate_size: 0, tag: 2 }
+xcl: DirectStorage: BCPack BC2: mode 2 unsupported or disabled (src=85, intermediate=0, dst=65536, swizzle=0); the request fails with E_DECOMPRESSION
+xcl: DirectStorage: BCPack refusals so far: 1 requests: BC2 1 (65536 bytes)
+xcl: DirectStorage: request #0: options 0x1 (file source, zlib), destination 0x19925a2bd60 (65536 bytes, page offset 0), source size 85, intermediate 0
+test hle::d3d12x::vram::tests::idle_pages_are_swept_from_their_queue ... ok
+test hle::dstorage::parallel::tests::a_cancelled_refusal_after_parallel_work_keeps_status_successful ... ok
+xcl: DirectStorage: a request failed (0x89240017): 98304 bytes from 
+xcl: DirectStorage: request #1: options 0x1 (file source, zlib), destination 0x19921c50000 (65536 bytes, page offset 0), source size 85, intermediate 0
+test hle::dstorage::parallel::tests::budget_retires_ready_error_and_payload_without_worker_notification ... ok
+xcl: DirectStorage: a request failed (0x89240009): 65536 bytes from C:\Users\<USER>\AppData\Local\Temp\xcl-dstorage-parallel-2632-1.zlib
+xcl: DirectStorage: request #2: options 0x1 (file source, zlib), destination 0x19925fb4420 (65536 bytes, page offset 0), source size 85, intermediate 0
+test hle::dstorage::parallel::tests::a_destination_decommitted_during_decode_fails_in_fifo_order ... ok
+xcl: DirectStorage: request #3: options 0x1 (file source, zlib), destination 0x19925f64400 (49152 bytes, page offset 0), source size 71, intermediate 0
+xcl: DirectStorage: request #4: options 0x1 (file source, zlib), destination 0x19925fa4430 (49152 bytes, page offset 0), source size 71, intermediate 0
+xcl: DirectStorage: request #5: options 0x1 (file source, zlib), destination 0x19925fb0440 (49152 bytes, page offset 0), source size 71, intermediate 0
+xcl: DirectStorage: request #6: options 0x1 (file source, zlib), destination 0x19925d66320 (49152 bytes, page offset 0), source size 71, intermediate 0
+xcl: DirectStorage: request #7: options 0x1 (file source, zlib), destination 0x19925a1bd50 (49152 bytes, page offset 0), source size 71, intermediate 0
+
+thread 'xcl-ds-decomp-0' (23512) panicked at crates\xcl\src\hle\dstorage\parallel_tests.rs:482:17:
+test decoder task failure
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+xcl: DirectStorage: a request failed (0x80004004): 49152 bytes from C:\Users\<USER>\AppData\Local\Temp\xcl-dstorage-parallel-2632-4.zlib
+test hle::dstorage::parallel::tests::cancellation_of_started_or_prepared_work_keeps_existing_results ... ok
+test hle::dstorage::parallel::tests::failed_worker_task_reports_error_and_preserves_the_next_result ... ok
+xcl: DirectStorage: request #8: options 0x1 (file source, zlib), destination 0x19925f9c420 (49152 bytes, page offset 0), source size 64, intermediate 0
+xcl: DirectStorage: request #9: options 0x1 (file source, zlib), destination 0x19925f6c410 (53248 bytes, page offset 0), source size 71, intermediate 49152
+xcl: DirectStorage: a request failed (0x89240032): 49152 bytes from C:\Users\<USER>\AppData\Local\Temp\xcl-dstorage-parallel-2632-5.zlib
+test hle::dstorage::parallel::tests::parallel_decode_reports_corruption_and_zero_pads_the_next_request ... ok
+xcl: DirectStorage: request #10: options 0x1 (file source, zlib), destination 0x19925a1bd50 (49152 bytes, page offset 0), source size 71, intermediate 0
+xcl: DirectStorage: request #11: options 0x1 (file source, zlib), destination 0x19925f64400 (49152 bytes, page offset 0), source size 71, intermediate 0
+test hle::dstorage::parallel::tests::parallel_out_of_order_completion_retires_fifo ... ok
+xcl: DirectStorage: request #12: options 0x1 (file source, zlib), destination 0x19925f9c420 (49152 bytes, page offset 0), source size 71, intermediate 0
+xcl: DirectStorage: request #13: options 0x1 (file source, zlib), destination 0x19925a1bd50 (49152 bytes, page offset 0), source size 71, intermediate 0
+test hle::dstorage::parallel::tests::request_larger_than_staging_budget_uses_sequential_fallback ... ok
+test hle::dstorage::parallel::tests::queue_close_waits_for_started_preparation ... ok
+xcl: DirectStorage: request #14: options 0x1 (file source, zlib), destination 0x19925d66320 (98304 bytes, page offset 0), source size 118, intermediate 0
+xcl: DirectStorage: request #15: options 0x1 (file source, zlib), destination 0x19925a1bd50 (98304 bytes, page offset 0), source size 118, intermediate 0
+xcl: DirectStorage: request #16: options 0x1 (file source, zlib), destination 0x19925f9c420 (65536 bytes, page offset 0), source size 84, intermediate 0
+test hle::dstorage::parallel::tests::submitted_batch_retires_without_notifications_or_followup_submits ... ok
+test hle::dstorage::parallel::tests::staging_stays_charged_until_the_other_queue_finishes_retirement ... ok
+xcl: DirectStorage: a request failed (0x89240009): 16 bytes from 
+xcl: DirectStorage: request #32: options 0x600000 (memory source), destination 0x19921c50000 (physical pages) (16 bytes, page offset 0), source size 16, intermediate 0
+xcl: DirectStorage: request #64: options 0x600000 (memory source), destination 0x19921c50000 (physical pages) (16 bytes, page offset 0), source size 16, intermediate 0
+xcl: DirectStorage: a request failed (0x89240017): 98304 bytes from C:\Users\<USER>\AppData\Local\Temp\xcl-dstorage-parallel-2632-11.zlib
+xcl: DirectStorage: request #128: options 0x600000 (memory source), destination 0x19921c50000 (physical pages) (16 bytes, page offset 0), source size 16, intermediate 0
+xcl: DirectStorage: request #256: options 0x600000 (memory source), destination 0x19921c50000 (physical pages) (16 bytes, page offset 0), source size 16, intermediate 0
+test hle::dstorage::parallel::tests::tight_budget_makes_progress_after_immediate_file_failure ... ok
+xcl: DirectStorage: request #512: options 0x600000 (memory source), destination 0x19921c50000 (physical pages) (16 bytes, page offset 0), source size 16, intermediate 0
+test hle::d3d12x::title_textures::tests::read_committed_tolerates_concurrent_decommit ... ok
+xcl: DirectStorage: request #1024: options 0x600000 (memory source), destination 0x19921c50000 (physical pages) (16 bytes, page offset 0), source size 16, intermediate 0
+xcl: DirectStorage: request #2048: options 0x600000 (memory source), destination 0x19921c50000 (physical pages) (16 bytes, page offset 0), source size 16, intermediate 0
+xcl: DirectStorage: request #4096: options 0x600000 (memory source), destination 0x19921c50000 (physical pages) (16 bytes, page offset 0), source size 16, intermediate 0
+xcl: DirectStorage: a request failed (0x89240009): 16 bytes from 
+xcl: DirectStorage: a request failed (0x8924000f): 8 bytes from 
+test hle::dstorage::tests::a_memory_queue_inflates_zlib_and_reports_through_status_and_errors ... ok
+test hle::dstorage::tests::a_destination_page_filled_in_after_enqueue ... ok
+test hle::dstorage::tests::a_new_status_array_slot_is_complete ... ok
+xcl: DirectStorage: BCPack refusals so far: 2 requests: BC2 2 (69640 bytes)
+xcl: DirectStorage: QueryInterface(deadbeef-0000-4000-[80, 00, 00, 11, 22, 33, 44, 55]) on the object of fb3b54ac-bf82-463a refused (E_NOINTERFACE)
+xcl: DirectStorage: DStorageGetFactory: refused IID deadbeef-0000-4000-8000-001122334455 (E_NOINTERFACE)
+test hle::dstorage::tests::a_refused_factory_iid_returns_e_nointerface_and_clears_out ... ok
+xcl: DirectStorage: a request failed (0x89240030): 4104 bytes from 
+xcl: DirectStorage: BCPack refusals so far: 3 requests: BC2 3 (73744 bytes)
+xcl: DirectStorage: a request failed (0x8924001b): 4 bytes from 
+test hle::dstorage::tests::a_refused_bcpack_request_is_filled_only_under_the_switch ... ok
+xcl: DirectStorage: request #8192: options 0x600000 (memory source), destination 0x19921c50000 (physical pages) (16 bytes, page offset 0), source size 16, intermediate 0
+test hle::dstorage::tests::a_refused_request_that_is_cancelled_is_no_failure ... ok
+xcl: DirectStorage: BCPack BC1 stream (decode): the stream ends early or is corrupt (packed=97, dst=128); the request fails with E_DECOMPRESSION
+xcl: DirectStorage: BCPack BC1 streams not unpacked so far: 1
+xcl: DirectStorage: a request failed (0x89240030): 128 bytes from 
+test hle::dstorage::tests::a_deferred_page_array_unmapped_under_the_worker_fails_the_request ... ok
+xcl: DirectStorage: BCPack BC1: first request unpacked (194 to 136 bytes)
+xcl: DirectStorage: BCPack BC1 streams not unpacked so far: 2
+test hle::dstorage::tests::bcpack_fill_blocks_are_solid_in_their_bcn_format ... ok
+test hle::dstorage::tests::bcpack_bc1_requests_through_the_queue ... ok
+test hle::dstorage::tests::bcpack_refusals_are_counted_per_mode_and_still_fail ... ok
+test hle::dstorage::tests::cancel_pending_and_submitted_requests_by_tag ... ok
+xcl: DirectStorage: a request failed (0x8924000f): 8 bytes from 
+xcl: DirectStorage: SwizzleMode: hardware swizzle mode 1 unsupported
+test hle::dstorage::tests::error_record_resets_after_retrieval_and_event_is_duplicated ... ok
+xcl: DirectStorage: a request failed (0x89240007): 16 bytes from C:\Users\<USER>\AppData\Local\Temp\xcl-dstorage-error-record-2632.bin
+test hle::dstorage::tests::error_record_has_the_failed_requests_offset_source_size_and_tag ... ok
+xcl: DirectStorage: a request failed (0x89240032): 117 bytes from 
+test hle::dstorage::tests::multi_stage_intermediate_size_validation_and_zlib ... ok
+test hle::dstorage::tests::queue_validates_status_and_fence_pointers_and_closed_rejects_work ... ok
+test hle::dstorage::tests::requests_are_checked_like_the_console ... ok
+xcl: DirectStorage: a request failed (0x89240009): 28 bytes from 
+test hle::dstorage::tests::physical_page_destinations_and_sources ... ok
+test hle::dxcompiler::tests::the_console_compiler_is_the_pc_one ... ok
+xcl: GameInput: XCL_PRESS_AT entry "junk" not understood (seconds:BUTTON)
+xcl: GameInput: XCL_PRESS_AT entry "3:NOPE" not understood (seconds:BUTTON)
+test hle::gameinput::tests::keyboard_mouse_config_gates_keyboard_and_kbm_but_keeps_scripted ... ok
+test hle::gameinput::tests::press_script_parses_buttons_and_times ... ok
+xcl: GameInput: GetCurrentReading for kinds 0x40000 first asked
+xcl: GameInput: QueryInterface(31dd86fb4c1b408a868f439b3cd47125) refused (E_NOINTERFACE)
+xcl: GameInput: QueryInterface(2156947ae1fa4de0a30bd812931dbd8d) refused (E_NOINTERFACE)
+xcl: GameInput: QueryInterface(deadbeef123456789abcdef012345678) refused (E_NOINTERFACE)
+xcl: GameInput: QueryInterface(11be2a7e4254445a9c09ffc40f006918) refused (E_NOINTERFACE)
+test hle::gameinput::tests::query_interface_validates_iids_and_refcounts ... ok
+xcl: GameInput: GetCurrentReading for kinds 0x10 first asked
+xcl: GameInput: RegisterReadingCallback for kinds 0x40000 first asked
+test hle::gameinput::tests::readings_come_and_go ... ok
+test hle::gameinput::tests::self_unregister_from_inside_callback_does_not_deadlock ... ok
+xcl: GameInput: device callback for kinds 0x40000 (enumeration 1)
+test hle::dstorage::tests::queue_release_concurrent_breaks_worker_cycle ... ok
+test hle::gameinput::tests::unregister_async_device_callback_waits_for_enum_thread ... ok
+test hle::gameinput::tests::stop_then_unregister_still_waits_for_in_flight_callback ... ok
+test hle::gameinput::tests::xinput_buttons_map_to_gameinput ... ok
+test hle::kbm::tests::focus_loss_resets_mouse_velocity_and_wheel_state ... ok
+test hle::kbm::tests::mouse_speed_becomes_a_deflection ... ok
+test hle::kbm::tests::movement_keys_make_a_unit_stick ... ok
+test hle::kbm::tests::scancodes_map_to_distinct_vks_and_fall_back_safely ... ok
+test hle::kbm::tests::velocity_follows_the_counts_and_settles ... ok
+test hle::kbm::tests::wheel_notches_press_bumpers_one_by_one ... ok
+test hle::kernelx::lazy::tests::a_lazy_page_is_committed_on_first_use ... ok
+test hle::kernelx::tests::a_home_decommitted_in_the_same_call_is_asked_again ... ok
+test hle::kernelx::tests::a_page_away_at_another_home_goes_home_with_it ... ok
+test hle::kernelx::tests::a_page_away_from_home_is_committed_once ... ok
+test hle::kernelx::tests::a_page_away_moves_on_without_going_home ... ok
+test hle::kernelx::tests::a_page_whose_move_fails_stays_mapped_where_it_was ... ok
+test hle::kernelx::tests::a_short_sleep_is_passed_on_while_the_title_is_held ... ok
+test hle::kernelx::lazy::tests::threads_first_touching_one_lazy_page_together_all_go_on ... ok
+test hle::gameinput::tests::unregister_reading_callback_waits_for_in_flight_and_prevents_uaf ... ok
+test hle::kernelx::tests::a_sleep_of_a_title_not_held_takes_its_time ... ok
+test hle::kernelx::tests::affinity_masks_outside_the_process_are_fitted ... ok
+test hle::kernelx::tests::console_alloc_flags_are_stripped ... ok
+test hle::kernelx::tests::console_mode_registry_value ... ok
+xcl: timer: finest resolution for the title (was 1.00 ms, now 0.50 ms; kept while the window is hidden: no)
+test hle::kernelx::tests::fine_timer_makes_short_sleeps_short ... ok
+test hle::kernelx::tests::get_module_handle_matches_load_library_for_console_aliases_and_stubs ... ok
+test hle::kernelx::tests::get_proc_address_and_load_library_ex_reject_null_name ... ok
+test hle::kernelx::tests::get_thread_name_sizing_truncation_and_errors ... ok
+xcl: kernelx: reservation 0x700600000000 (0x600000000 bytes, no CPU access) is the GPU view of 0x700000000000
+test hle::kernelx::tests::gpu_view_reservations_name_their_cpu_view ... ok
+test hle::kernelx::tests::gpu_visible_fallback_memory_is_write_watched ... ok
+test hle::kernelx::tests::mapping_fresh_pages_does_not_query_each_page ... ok
+test hle::kernelx::tests::mapping_lazy_pages_again_does_not_query_each_page ... ok
+test hle::kernelx::tests::pages_mapped_again_at_another_address_keep_what_was_written ... ok
+test hle::kernelx::tests::pages_mapped_again_at_the_same_address_keep_what_was_written ... ok
+test hle::kernelx::tests::physical_pages_in_uma ... ok
+test hle::kernelx::tests::a_sleep_does_not_count_the_time_the_title_is_held ... ok
+test hle::kernelx::tests::scatter_timing ... ignored
+xcl: SetThreadAffinityMask: mask 0x100 names processors outside the process's 0xff – 0x1
+xcl: SetThreadGroupAffinity: mask 0x101 names processors outside the process's 0xff – 0x1
+test hle::kernelx::tests::set_thread_affinity_mask_takes_console_masks ... ok
+xcl: kernelx: reservation 0x199291d0000 (0x400000 bytes, no CPU access) is the GPU view of 0x500000000
+test hle::kernelx::tests::sparse_64k_reservation_registers_gpu_view_mirror_and_releases_cleanly ... ok
+test hle::kernelx::tests::title_memory_status_reports_budget ... ok
+test hle::kernelx::tests::tracing_keeps_the_last_error ... ok
+test hle::kernelx::tests::virtual_free_ex_and_sparse_validation ... ok
+test hle::kernelx::tests::virtual_query_fastpath_covers_committed_coherent_window ... ok
+test hle::kernelx::tests::xmem_alignment_and_zeroing ... ok
+test hle::kernelx::tests::xmem_and_physical_page_overflows_fail_cleanly ... ok
+test hle::kernelx::tests::xmem_is_tools_mem_available_returns_false ... ok
+test hle::kernelx::tests::xmem_placeholder_split_replace_and_coalesce ... ok
+test hle::kernelx::tests::xmem_virtual_query_excludes_guard_pages ... ok
+test hle::kernelx::tests::xmem_virtual_query_marks_cpu_readable_memory ... ok
+test hle::mfplat::tests::null_pointers_return_e_pointer ... ok
+large upload: request=138412032 B first_capacity=134217728 B grown_capacity=150994944 B growth=39.3226ms repeat=26.2346ms byte_exact=true
+test gpu::texture::tests::gpu_large_mixed_upload_keeps_tight_staging_and_exact_pixels ... ok
+test hle::mfplat::tests::routing_and_system_fallback ... ok
+xcl: XCL_NETWORK=0: connect fails (no network)
+xcl: XCL_NETWORK=0: WinHttpSendRequest fails (no network)
+test hle::netoff::tests::only_loopback_goes_through ... ok
+xcl: XCL_NETWORK=0: the system's WinHTTP, WinINet and Winsock refuse the network for the whole process (loopback and local names excepted)
+xcl: XCL_NETWORK=0: WinHttpSendRequest fails (no network)
+xcl: XCL_NETWORK=0: InternetOpenUrl fails (no network)
+xcl: XCL_NETWORK=0: getaddrinfo(example.com) fails (no network)
+test hle::netoff::tests::the_systems_own_network_functions_refuse ... ok
+xcl: Opus: decoder = Windows' MSOpusDecoder (Media Foundation)
+xcl: mfplat: MFResetDXGIDeviceManagerX bridged ResetDevice failed: 0x80070057 (direct was 0x80070057)
+test hle::opus::tests::decode_awc_block_preskip_rate_and_flush ... ok
+test hle::opus::tests::decode_ogg_eos_matches_raw_pcm_window_mono_and_stereo ... ok
+test hle::opus::tests::decode_silk_hybrid_celt_all_frame_sizes ... ok
+test hle::opus::tests::decode_stereo_and_multistream_5_1 ... ok
+XCL_SAMPLE_AWC not set – skipping
+test hle::opus::tests::decodes_a_game_sound ... ok
+test hle::opus::tests::framing_detection_awc_blocks_and_raw ... ok
+test hle::opus::tests::ogg_eos_frame_estimate_handles_preskip_and_initial_granules ... ok
+test hle::opus::tests::ogg_pcm_trim_requires_full_mft_output ... ok
+test hle::opus::tests::ogg_timing_counts_continued_packet_on_its_completion_page ... ok
+test hle::opus::tests::ogg_timing_requires_one_complete_contiguous_link ... ok
+test hle::opus::tests::opus_head_roundtrip_mono_stereo_surround ... ok
+test hle::opus::tests::rfc6716_packet_codes_and_limits ... ok
+test hle::opus::tests::rfc6716_table2_all_32_configs ... ok
+test hle::playstation::tests::playstation_controllers_are_known_by_their_hid_path ... ok
+test hle::playstation::tests::playstation_reports_read_as_a_gamepad ... ok
+test hle::tests::aliases_take_precedence ... ok
+test hle::tests::cross_module_lookup_finds_xmem ... ok
+test hle::tests::default_routes ... ok
+test hle::user::tests::register_class_accepts_valid_size_and_preserves_attributes ... ok
+test hle::user::tests::register_class_checks_size_before_reading_remaining_fields ... ok
+cbSize=0: Windows atom=0x0, error=87; XCL atom=0x0, error=87
+cbSize=1: Windows atom=0x0, error=87; XCL atom=0x0, error=87
+cbSize=79: Windows atom=0x0, error=87; XCL atom=0x0, error=87
+cbSize=81: Windows atom=0x0, error=87; XCL atom=0x0, error=87
+cbSize=4294967295: Windows atom=0x0, error=87; XCL atom=0x0, error=87
+test hle::user::tests::register_class_rejects_invalid_sizes_like_windows ... ok
+test hle::xaudio2::tests::clamp_regions_enforces_play_end_and_loop_invariants ... ok
+xcl: XAudio2: engine created (system XAudio2 2.9, flags 0x0)
+test hle::kernelx::tests::a_sleep_stops_counting_when_the_title_gets_held ... ok
+xcl: XAudio2: XAudio2Create – dropping console flags 0x1
+xcl: XAudio2: engine created (system XAudio2 2.9, flags 0x8000)
+xcl: XAudio2: engine created (system XAudio2 2.9, flags 0x0)
+test hle::xaudio2::tests::engine_from_the_system_dll ... ok
+test hle::xaudio2::tests::opus_format_detection_and_region_clamping ... ok
+xcl: XAudio2: engine created (system XAudio2 2.9, flags 0x0)
+test hle::kernelx::tests::scatter_matches_a_model_of_physical_pages ... ok
+test hle::xaudio2::tests::silence_has_the_length_of_the_xma_buffer ... ok
+test hle::xaudio2::tests::silent_buffer_clamps_regions_and_zero_max_bytes ... ok
+test hle::xaudio2::tests::xma2_format_to_pcm16 ... ok
+xcl: XAudio2: engine created (system XAudio2 2.9, flags 0x0)
+test hle::mfplat::tests::reset_dxgi_device_manager_with_d3d12_device_and_token_validation ... ok
+test hle::xg::tests::console_floats_are_32_bits ... ok
+test hle::xg::tests::d16s8_is_planar_depth_and_stencil ... ok
+test hle::xg::tests::rgba8_64kb_s_layout ... ok
+test hle::xgameruntime::accessibility::tests::closed_caption_null_and_roundtrip_zeroes_padding ... ok
+test hle::xgameruntime::accessibility::tests::closed_caption_properties_abi_layout ... ok
+test hle::xgameruntime::accessibility::tests::high_contrast_classification_and_query ... ok
+test hle::xgameruntime::api::tests::default_audio_endpoint_is_windows_default ... ok
+xcl: XUser: device association callback #0x41530001 registered (queue 0x19925acfd50) – before the user is signed in
+xcl: XUserAddAsync(options=0x1) → local offline user 'Player1'
+xcl: XUser: the local user reached the title (XUserAddResult); 1 device association callback(s)
+xcl: XUser: the gamepad is now associated with the local user (device association callback)
+test hle::xgameruntime::api::tests::device_association_reaches_the_title ... ok
+test hle::xgameruntime::api::tests::gamer_picture_is_a_png ... ok
+test hle::xgameruntime::api::tests::guids_format_like_the_registry ... ok
+xcl: XGameRuntime: XPackage#36 – not supported (E_NOTIMPL)
+test hle::xgameruntime::api::tests::legacy_console_iids_map_to_their_own_slots ... ok
+test hle::xgameruntime::api::tests::parse_mute_tts_values ... ok
+xcl: XGameRuntime: no System32\xgameruntime.dll (Gaming Services) – XCL's own XTaskQueue/XAsync are used; dialogs, text entry, game invites, game streaming and the other APIs XCL does not implement are unavailable
+no system xgameruntime.dll – skipping
+test hle::xgameruntime::api::tests::thunk_protocol_with_xcl_objects_on_pc_queues ... ok
+xcl: XGameRuntime: QueryApiImpl 01acd177-91f9-4763-a38e-ccbb55ce32e0/01acd177-91f9-4763-a38e-ccbb55ce32e0 → XUser: XCL
+xcl: XUserAddAsync(options=0x1) → local offline user 'Player1'
+xcl: XUser: token #0 for POST https://userstats.xboxlive.com/batch – XCL's local placeholder
+xcl: XUser: token #1 for GET https://social.xboxlive.com/users/me/people – XCL's local placeholder
+test hle::xgameruntime::api::tests::token_and_signature_utf8_and_utf16_through_vtable ... ok
+xcl: XUserAddAsync(options=0x1) → local offline user 'Player1'
+xcl: XUser: token #2 for GET https://example.playfabapi.com/ – none: no Xbox Live (0x80072EFD)
+test hle::xgameruntime::api::tests::token_requests_fail_offline_by_default ... ok
+xcl: XGameRuntime: QueryApiImpl 7d824997-10dc-45ab-86b7-2737767c0bf1/7d824997-10dc-45ab-86b7-2737767c0bf1 → XUser (devices): XCL
+test hle::xgameruntime::api::tests::user_device_association_and_controller_lookup ... ok
+test hle::xgameruntime::api::tests::user_locale_selection_matches_manifest_resources ... ok
+test hle::xgameruntime::api::tests::vtables_follow_the_gdk_table ... ok
+xcl: XGameRuntime: XSpeechToTextSetPositionHint – not supported (E_NOTIMPL)
+xcl: XGameRuntime: QueryApiImpl 3e241977-6237-41e9-8559-102c2d9983f1/d722b373-8c4d-4692-9e51-d6ad9b37aa7d → XAccessibility: XCL (fallback – no system xgameruntime.dll)
+test hle::xgameruntime::api::tests::xcl_xaccessibility_fallback_vtable_covers_captions_and_high_contrast ... ok
+xcl: XThreadVerifyNotTimeSensitive called on a time-sensitive thread
+xcl: XThreadAssertNotTimeSensitive called on a time-sensitive thread
+test hle::xgameruntime::api::tests::xcl_xasync_fallback_vtable_covers_composite_queues_and_threads ... ok
+xcl: XErrorReport 0x80004005: outer error
+xcl: XErrorReport 0x80070057: nested error
+test hle::xgameruntime::api::tests::xerror_report_allows_reentrant_set_callback_and_report ... ok
+xcl: XGameRuntime: QueryApiImpl 37e56907-2f10-41e8-b72f-36edb185331a/37e56907-2f10-41e8-b72f-36edb185331a → XNetworking: XCL
+xcl: XGameRuntime: QueryApiImpl 37e56907-2f10-41e8-b72f-36edb185331a/bf2346b2-39af-4658-b5ea-44713c7e83b3 → XNetworking: XCL
+xcl: XGameRuntime: QueryApiImpl 8ca467f7-22e8-4096-8456-bb8aa13f79d8/8ca467f7-22e8-4096-8456-bb8aa13f79d8 → XError: XCL
+xcl: XErrorReport 0x80004005: unit test error
+test hle::xgameruntime::api::tests::xnetworking_and_xerror_through_vtable ... ok
+xcl: XGameRuntime: QueryApiImpl af406016-e850-4aa8-a88d-2f3dcb9dac7e/af406016-e850-4aa8-a88d-2f3dcb9dac7e → XPackage: XCL
+test hle::xgameruntime::api::tests::xpackage_get_identifier_slot_27_uses_three_args ... ok
+xcl: XAudio2: XMA2 voice (1 ch., 48000 Hz) → real PCM16 decoding via hle::xma2
+xcl: XAudio2: XMA buffer decoded 0 samples – substituting silence
+test hle::xaudio2::tests::clamped_and_silenced_buffers_accepted_by_windows_xaudio2 ... ok
+test hle::xgameruntime::gamesave::tests::atomic_writes_preserve_xcltmp_blobs_and_skip_leftover_temps ... ok
+test hle::xaudio2::tests::xma2_source_voice_decodes_and_manages_lifetime ... ok
+test hle::xgameruntime::gamesave::tests::case_insensitive_blob_and_container_matching_on_ntfs ... ok
+xcl: XGameSaveGetRemainingQuota: 262143 KiB left of 256 MiB
+test hle::xgameruntime::gamesave::tests::containers_blobs_round_trip ... ok
+test hle::xgameruntime::gamesave::tests::delete_container_async_runs_on_work_dispatch_with_owned_inputs ... ok
+test hle::xgameruntime::gamesave::tests::delete_container_async_terminated_queue_preserves_save ... ok
+test hle::xgameruntime::gamesave::tests::delete_container_invalid_arguments_preserve_provider_root ... ok
+test hle::xgameruntime::gamesave::tests::delete_container_rejects_empty_name_without_wiping_provider_root ... ok
+test hle::xgameruntime::gamesave::tests::initialize_provider_result_rejects_null_out_without_consuming_async ... ok
+test hle::xgameruntime::networking::tests::cert_verification_fails_closed_on_malformed_pins_and_zero_win32_errors ... ok
+test hle::xgameruntime::networking::tests::chain_certs_read_at_the_sdk_offsets ... ok
+test hle::xgameruntime::networking::tests::connectivity_hint_and_pin_verification ... ok
+test hle::xgameruntime::networking::tests::default_security_info_bytes_zeroes_padding_and_fields ... ok
+xcl: XAudio2: Opus voice (1 ch., 48000 Hz) → real PCM16 decoding via MSOpusDecoder
+test hle::xaudio2::tests::opus_source_voice_decodes_and_manages_lifetime ... ok
+test hle::xgameruntime::networking::tests::struct_layouts_match_gdk_abi ... ok
+test hle::xgameruntime::gamesave::tests::names_windows_would_change_round_trip ... ok
+test hle::xgameruntime::gamesave::tests::read_blob_names_require_a_complete_counted_array ... ok
+test hle::xgameruntime::networking::tests::security_info_utf8_and_utf16_follow_gdk_arg_order ... ok
+test hle::xgameruntime::networking::tests::udp_port_sync_and_async ... ok
+test hle::xgameruntime::taskqueue::tests::closed_and_stray_handles_are_not_read ... ok
+test hle::xgameruntime::taskqueue::tests::composite_queue_termination_preserves_shared_parent_port_work ... ok
+test hle::xgameruntime::taskqueue::tests::is_empty_tracks_work_and_completion_ports_independently ... ok
+test hle::xgameruntime::taskqueue::tests::monitor_fires_on_submit_and_stops_after_unregister ... ok
+test hle::xgameruntime::taskqueue::tests::process_queue_state_distinguishes_default_disabled_and_replacement ... ok
+test hle::xgameruntime::taskqueue::tests::manual_threadpool_immediate_delayed_and_terminate ... ok
+test hle::xgameruntime::taskqueue::tests::terminate_cancels_delayed_callbacks_before_its_own_callback ... ok
+test hle::xgameruntime::tests::feature_availability_covers_the_public_feature_enum ... ok
+test hle::xgameruntime::tests::gamertag_components_are_consistent_and_fit_their_buffers ... ok
+xcl: XPersistentLocalStorageGetSpaceInfo: 4096 MiB available, 4096 MiB free, 0 MiB used of 4096 MiB (host ok)
+xcl: XPersistentLocalStorageGetSpaceInfo: 4095 MiB available, 4095 MiB free, 0 MiB used of 4096 MiB (host ok)
+test hle::xgameruntime::tests::pls_space_info_export ... ok
+test hle::xgameruntime::tests::pls_space_math_quota_and_saturation ... ok
+test hle::xgameruntime::tests::pls_used_counts_nested_files ... ok
+ᮥ������� ᮧ���� ��� C:\Users\<USER>\AppData\Local\Temp\xcl_pls_test_2632_links\pls\linked <<===>> C:\Users\<USER>\AppData\Local\Temp\xcl_pls_test_2632_links\outside
+test hle::xgameruntime::tests::pls_used_does_not_follow_dir_links ... ok
+test hle::xgameruntime::tests::save_folder_async ... ok
+test hle::xgameruntime::tests::system_info ... ok
+xcl: XUserAddAsync(options=0x1) → local offline user 'Player1'
+test hle::xgameruntime::tests::user_add_and_queries ... ok
+test hle::xgameruntime::xasync::tests::a_failing_begin_fails_the_call_not_xasyncbegin ... ok
+test hle::xgameruntime::xasync::tests::async_work_on_a_terminated_queue_is_aborted ... ok
+test hle::xgameruntime::xasync::tests::begin_with_fixups_drops_payload_on_begin_failure ... ok
+test hle::xgameruntime::xasync::tests::begin_with_fixups_relocates_embedded_pointers ... ok
+test hle::xgameruntime::taskqueue::tests::register_waiter_validates_port_and_ignores_terminated_queue ... ok
+test hle::xgameruntime::xasync::tests::begin_with_payload_roundtrip ... ok
+test hle::xgameruntime::xasync::tests::cancel_is_the_providers_to_do ... ok
+test hle::xgameruntime::xasync::tests::cancel_lets_running_work_finish ... ok
+test hle::xgameruntime::xasync::tests::complete_finishes_cleanup_and_header_before_publishing_done ... ok
+test hle::xgameruntime::xasync::tests::complete_synchronously_inside_begin_zero_and_nonempty_payload ... ok
+test hle::xgameruntime::xasync::tests::completing_with_e_pending_does_not_complete ... ok
+test hle::xgameruntime::taskqueue::tests::dispatch_infinite_wakes_and_returns_false_on_terminate ... ok
+test hle::xgameruntime::taskqueue::tests::a_terminated_queue_takes_no_new_work ... ok
+test hle::xgameruntime::xasync::tests::concurrent_get_result_runs_cleanup_exactly_once ... ok
+test hle::xgameruntime::xasync::tests::errors_propagate_and_release_active_state ... ok
+test hle::xgameruntime::xsign::tests::base64_matches_rfc4648_vectors ... ok
+test hle::xgameruntime::xsign::tests::canonical_payload_caps_body_at_8192_bytes ... ok
+test hle::xgameruntime::xsign::tests::canonical_url_extracts_path_and_query ... ok
+test hle::xma2::tests::all_huffman_tables_build_and_roundtrip_every_symbol ... ok
+test hle::xgameruntime::xsign::tests::signature_header_verifies_with_ephemeral_p256_key ... ok
+test hle::xma2::tests::corrupt_and_empty_packets_never_panic ... ok
+test hle::xma2::tests::cross_packet_frames_and_streaming_chunks_match_single_shot ... ok
+test hle::xma2::tests::decodes_xma2_and_xma1_bitstreams_matching_ffmpeg ... ok
+test hle::xma2::tests::quant_gains_match_power_at_and_beyond_both_limits ... ok
+test hle::xma2::tests::stream_config_parses_xma2_and_xma1_layouts ... ok
+test hle::xma2::tests::surround_5_1_interleaves_three_streams_and_isolates_channels ... ok
+test insn::tests::decodes_the_console_only_instructions ... ok
+test insn::tests::sse4a_bit_fields ... ok
+test launcher::tests::attribute_values_have_their_character_references_replaced ... ok
+test launcher::tests::command_line_quoting ... ok
+test hle::xma2::tests::fast_imdct_matches_naive_reference_for_all_xma_sizes ... ok
+test launcher::tests::commented_out_entries_are_not_the_games ... ok
+test launcher::tests::cpu_feature_detection_identifies_missing_features ... ok
+test launcher::tests::display_name_is_the_shell_name_unless_it_is_a_resource ... ok
+test launcher::tests::finds_exe_in_subfolder_and_via_config ... ok
+test launcher::tests::game_config_accepts_bom_marked_utf16_and_rejects_malformed_text ... ok
+test launcher::tests::microsoft_game_config_parsing ... ok
+test launcher::tests::missing_cpu_message_format ... ok
+test launcher::tests::console_detection ... ok
+test launcher::tests::several_executables_in_config ... ok
+xcl: loaded xcl_dllmain_false.dll @ 0x7e5100000000 (size 0x2000, preferred 0x7e5100000000)
+xcl: DllMain(xcl_dllmain_false.dll, PROCESS_ATTACH)
+xcl: loaded xcl_dllmain_false.dll @ 0x1990c210000 (size 0x2000, preferred 0x7e5100000000, relocated)
+xcl: DllMain(xcl_dllmain_false.dll, PROCESS_ATTACH)
+xcl: loaded xcl_dllmain_true.dll @ 0x7e5200000000 (size 0x2000, preferred 0x7e5200000000)
+xcl: DllMain(xcl_dllmain_true.dll, PROCESS_ATTACH)
+test loader::tests::a_dll_whose_dllmain_fails_is_not_loaded ... ok
+test hle::xgameruntime::xasync::tests::terminate_manual_completion_port_with_delayed_async_does_not_deadlock ... ok
+test hle::xgameruntime::xasync::tests::xasync_run ... ok
+test manifest::tests::does_not_take_storage_size_from_another_section ... ok
+xcl: loaded xcl_bad_imports.dll @ 0x7e5300000000 (size 0x2000, preferred 0x7e5300000000)
+xcl: loaded xcl_bad_imports.dll @ 0x7e5300000000 (size 0x2000, preferred 0x7e5300000000)
+test loader::tests::a_dll_with_a_broken_import_table_is_not_left_registered ... ok
+test manifest::tests::commented_out_settings_are_not_read ... ok
+test manifest::tests::reads_the_settings_xcl_uses ... ok
+test modules::tests::describe_address_takes_arbitrary_stack_words ... ok
+test modules::tests::module_offset_survives_a_base_above_the_address ... ok
+test pe::tests::delay_import_descriptor_field_rva_overflow_is_error ... ok
+test pe::tests::high_rva_directories_without_overflow_are_readable ... ok
+test pe::tests::import_descriptor_field_rva_overflow_is_error ... ok
+test manifest::tests::parses_declared_resources_languages_with_comments_and_utf16 ... ok
+test pe::tests::malformed_relocations_and_imports_are_errors ... ok
+test pe::tests::rejects_non_pe ... ok
+test pe::tests::relocation_block_field_rva_overflow_is_error ... ok
+test pe::tests::relocation_entry_rva_overflow_is_error ... ok
+test pe::tests::tls_field_rva_overflow_is_error ... ok
+test preflight::tests::a_complete_pc_has_nothing_to_report ... ok
+test preflight::tests::an_old_dxc_is_a_note_with_a_fix ... ok
+test preflight::tests::checks_round_trip_through_the_report ... ok
+test preflight::tests::each_missing_piece_is_reported_with_a_fix ... ok
+test preflight::tests::warp_and_no_device ... ok
+test preflight::tests::wave_width ... ok
+test pe::tests::parses_kernel32_exports_and_imports ... ok
+test resolver::tests::advapi32_imports_route_through_kernelx ... ok
+test resolver::tests::console_user32_and_legacy_dlls_reach_the_pc_functions ... ok
+xcl: [STUB] xgameplatform.dll!XUnimplementedAliasProbe first called from xcl-a2e682ac6d85a3c8.exe+0x69ac84 → returning 0x80004001
+xcl: [STUB] xgameruntime.thunks.dll!XUnimplementedThunkProbe first called from xcl-a2e682ac6d85a3c8.exe+0x69ac84 → returning 0x80004001
+xcl: [STUB] d3d12x.dll!D3D12UnimplementedAliasProbe first called from xcl-a2e682ac6d85a3c8.exe+0x69ac84 → returning 0x80004001
+test resolver::tests::hle_alias_stubs_inherit_canonical_module_default ... ok
+test resolver::tests::mapped_forwarders_preserve_get_proc_address_contract_and_dotted_dll_names ... ok
+test resolver::tests::ordinal_imports_fall_through_only_to_matching_system_dll ... ok
+test resolver::tests::xmem_imports_route_through_kernelx ... ok
+test pe::tests::parses_own_test_binary_tls ... ok
+C:\Users\<USER>\AppData\Local\Temp\xcl-rpf-2632-1795622461485036400\synthetic.rpf: 0.0 MB, 2 records, packed 0.0 MB → 0.0 MB
+  0x00000040         7 →         5 B  [firs]  PS_Duplicate
+  0x00000066         8 →         6 B  [seco]  PS_Duplicate
+test rpf::tests::atomic_extraction_cleans_up_an_interrupted_write ... ok
+C:\Users\<USER>\AppData\Local\Temp\xcl-rpf-corrupt-2632-1795622461519183100\synthetic.rpf: 0.0 MB, 1 records, packed 0.0 MB → 0.0 MB
+xcl rpf: cannot unpack PS_CorruptProbe at 0x40
+extensions (records, unpacked size):
+  (no extension)             1        0.0 MB
+data signatures (from a sample): 
+extracted 0 to C:\Users\<USER>\AppData\Local\Temp\xcl-rpf-corrupt-2632-1795622461519183100\out
+test rpf::tests::extraction_reports_a_corrupt_matching_record ... ok
+extensions (records, unpacked size):
+  (no extension)             2        0.0 MB
+data signatures (from a sample): firs 1, seco 1
+extracted 2 to C:\Users\<USER>\AppData\Local\Temp\xcl-rpf-2632-1795622461485036400\out
+C:\Users\<USER>\AppData\Local\Temp\xcl-rpf-error-2632-1795622461520521100\synthetic.rpf: 0.0 MB, 1 records, packed 0.0 MB → 0.0 MB
+  0x00000040         9 →         7 B  [payl]  PS_OutputProbe
+xcl rpf: cannot create C:\Users\<USER>\AppData\Local\Temp\xcl-rpf-error-2632-1795622461520521100\not-a-directory: Невозможно создать файл, так как он уже существует. (os error 183)
+test rpf::tests::extraction_reports_an_unusable_output_directory ... ok
+test rpf::tests::extraction_preserves_duplicate_record_names ... ok
+C:\Users\<USER>\AppData\Local\Temp\xcl-rpf-header-2632-1795622461523991200\truncated.rpf: 0.0 MB, no records with plain names
+RPF9 archives (headers every 2 KB): 1
+  0x00000000: truncated header
+truncated RPF9 headers: 1
+TOC encryption: unknown (insufficient complete header evidence)
+C:\Users\<USER>\AppData\Local\Temp\xcl-rpf-header-2632-1795622461523991200\truncated.rpf: 0.0 MB, no records with plain names
+RPF9 archives (headers every 2 KB): 2
+  0x00000000: fields 0x0 0x0 0x0
+  0x00000800: truncated header
+truncated RPF9 headers: 1
+TOC encryption: unknown (insufficient complete header evidence)
+test rpf::tests::truncated_rpf_headers_are_reported_without_panicking ... ok
+test rpf_probe::tests::bounds_reads_and_detects_repeated_nonzero_tocs ... ok
+test rpf_probe::tests::does_not_guess_from_one_header_or_unbounded_top ... ok
+test rpf_probe::tests::treats_truncated_headers_as_unknown ... ok
+test rpf_probe::tests::keeps_different_or_zero_tocs_unclassified ... ok
+test shaders::pipeline_cap_tests::the_cap_is_8_mib_unless_set_and_off_at_zero ... ok
+xcl shaders: --export-hlsl needs a value
+xcl shaders: --measure-pso needs a value
+xcl shaders: --record-hash needs a value
+test shaders::tests::a_flag_without_its_value_is_an_error ... ok
+test shaders::tests::aggregates_console_shaders ... ok
+      40 KB  6765ee35de7cdb8a.hlsl C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\second.bin
+1 program(s) written to C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\ordered (split wave64: false, 4 windows, 0 failure(s))
+      40 KB  6765ef35de7cdd3d.hlsl C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\first.bin
+1 program(s) written to C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\exact (split wave64: false, 4 windows, 0 failure(s))
+      40 KB  6765ee35de7cdb8a.hlsl C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\second.bin
+      40 KB  6765ef35de7cdd3d.hlsl C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\first.bin
+2 program(s) written to C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\short (split wave64: false, 4 windows, 0 failure(s))
+xcl shaders --export-hlsl: requested 3 program(s), wrote 2
+  record ffffffffffffffff not found
+0 program(s) written to C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\missing (split wave64: false, 4 windows, 0 failure(s))
+xcl shaders --export-hlsl: requested 1 program(s), wrote 0
+      40 KB  6765ef35de7cdd3d.hlsl C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\first.bin
+1 program(s) written to C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\mixed (split wave64: false, 4 windows, 0 failure(s))
+  C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\other.bin (41132cc9ec517235): not a console compute shader
+0 program(s) written to C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\other (split wave64: false, 4 windows, 1 failure(s))
+xcl shaders --export-hlsl: requested 1 program(s), wrote 0
+      40 KB  6765ef35de7cdd3d.hlsl C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\first.bin
+1 program(s) written to C:\Users\<USER>\AppData\Local\Temp\xcl-export-hlsl-2632\single (split wave64: false, 4 windows, 0 failure(s))
+test shaders::tests::hlsl_export_is_ordered_and_exact_hash_selects_one_record ... ok
+test launcher::tests::never_picks_xcl_itself ... ok
+test shaders::tests::record_hash_is_strict_hex ... ok
+XCL_SAMPLE_RPF not set – skipping
+test shaders::tests::retail_pack_sample ... ok
+test shaders::tests::used_only_keeps_the_compute_programs_an_earlier_run_used ... ok
+test source_hash::tests::a_source_hashes_the_same_with_crlf_and_lf_line_endings ... ok
+test source_hash::tests::other_carriage_returns_and_other_text_still_count ... ok
+test stubs::tests::builtin_db_parses_with_overrides ... ok
+test report::tests::a_crash_is_kept_while_another_thread_writes_the_report ... ok
+xcl: [STUB] unit.dll!Answer first called from xcl-a2e682ac6d85a3c8.exe+0x699de3 → returning 0x2a
+test stubs::tests::stub_returns_configured_value_and_counts_calls ... ok
+test tls::tests::carrier_is_a_valid_pe_with_tls_imports_and_relocs ... ok
+test tls::tests::carrier_variants_probe ... ignored
+xcl: TLS: unit-noidx: template 16 B, block 4096 B, index 30, threads initialized: 108
+test tls::tests::install_without_an_index_variable ... ok
+test tls::tests::template_size_rounding ... ok
+adapter=NVIDIA GeForce GTX 1080 dxil_bytes=2816 offline_ms=45 capped=1 made=0 refused=0 gpu_word0=42
+SKIPPED shaders::tests::pso_measurement_compiles_an_exact_synthetic_record: cannot disable the driver cache (Windows Developer Mode is required): Приложение запросило операцию, которая зависит от отсутствующего или несоответствующего компонента пакета SDK. (0x887A002D)
+test shaders::tests::pso_measurement_compiles_an_exact_synthetic_record ... ok
+test util::tests::ansi_out_encodes_codepage_and_truncates_on_char_boundaries ... ok
+test util::tests::cstr_out ... ok
+test util::tests::dll_keys ... ok
+test util::tests::globbing ... ok
+test util::tests::return_specs ... ok
+test vfs::tests::a_console_drive_mount_leaves_the_pcs_own_folders_on_that_drive ... ok
+test vfs::tests::a_console_drive_mount_leaves_xcls_shader_cache_on_that_drive ... ok
+xcl: [VFS] write to a game file redirected to the overlay: saves
+xcl: [VFS] write to a game file redirected to the overlay: data\ov_only.txt
+test shaders::pipeline_cap_tests::stale_blob_cannot_bypass_the_offline_pipeline_cap ... ok
+test vfs::tests::delete_file_rejects_directories_and_remove_dir_rejects_files ... ok
+xcl: [VFS] write to a game file redirected to the overlay: data\gone.txt
+xcl: [VFS] write to a game file redirected to the overlay: saves\slot1
+xcl: [VFS] write to a game file redirected to the overlay: data\hello.txt
+test vfs::tests::delete_is_a_persistent_whiteout ... ok
+xcl: [VFS] write to a game file redirected to the overlay: data\gone.txt
+xcl: [VFS] write to a game file redirected to the overlay: data
+test vfs::tests::mounts_and_classification ... ok
+test vfs::tests::directories ... ok
+xcl: [VFS] write to a game file redirected to the overlay: data\hello.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\hello.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\gone.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\sub\deep.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\new.bin
+xcl: [VFS] write to a game file redirected to the overlay: data\sub
+xcl: [VFS] write to a game file redirected to the overlay: data
+test vfs::tests::reads_never_touch_and_writes_copy_on_write ... ok
+xcl: [VFS] write to a game file redirected to the overlay: data\hello.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\gone.txt
+test vfs::tests::recreating_removed_directory_does_not_resurrect_original_children ... ok
+xcl: [VFS] write to a game file redirected to the overlay: data
+test vfs::tests::remove_dir_checks_both_layers_before_removing_overlay ... ok
+xcl: [VFS] write to a game file redirected to the overlay: data\hello.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\gone.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\sub
+xcl: [VFS] write to a game file redirected to the overlay: data
+xcl: [VFS] write to a game file redirected to the overlay: data\hello.txt
+test stubs::tests::make_stub_info_is_race_free_under_concurrency ... ok
+test vfs::tests::remove_dir_rejects_visible_subdirectories ... ok
+xcl: TLS: unit: template 64 B, block 8192 B, index 31, threads initialized: 98
+test vfs::tests::truncate_existing_rewrites_unoverlaid_disposition_and_opens_with_win32 ... ok
+test tls::tests::windows_loads_carrier_and_allocates_full_block_for_all_threads ... ok
+xcl: [VFS] write to a game file redirected to the overlay: data\gone.txt
+test vfs::tests::truncate_existing_validation_errors ... ok
+xcl: [VFS] write to a game file redirected to the overlay: data\hello.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\gone.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\gone.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\new.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\gone.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\hello.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\gone.txt
+xcl: [VFS] write to a game file redirected to the overlay: data
+test vfs_hooks::tests::failed_copy_and_move_do_not_resurrect_whiteouts ... ok
+test vfs_hooks::tests::create_always_reports_existing_game_file ... ok
+test vfs_hooks::tests::copy_enforces_fail_if_exists_and_overwrites_cleanly ... ok
+test vfs_hooks::tests::find_first_on_whited_out_and_recreated_directory ... ok
+xcl: [VFS] write to a game file redirected to the overlay: data\hello.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\HELLO.TXT
+xcl: [VFS] write to a game file redirected to the overlay: data\hello.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\gone.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\Hello.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\new.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\gone.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\hello.txt
+test vfs_hooks::tests::move_case_only_and_self_rename_preserve_file ... ok
+test vfs_hooks::tests::locked_overlay_move_to_temp_preserves_destination ... ok
+test vfs_hooks::tests::move_enforces_replace_existing_and_overwrites_cleanly ... ok
+test vfs_hooks::tests::move_with_locked_overlay_source_preserves_destination ... ok
+test vfs_hooks::tests::pls_disk_space_caps_auto_and_oversized_quotas_to_host_capacity ... ok
+xcl: [VFS] write to a game file redirected to the overlay: data\gone.txt
+test vfs_hooks::tests::replace_file_rejects_missing_or_whited_out_targets ... ok
+test gpu::tiling::tests::detile_level_matches_element_by_element ... ok
+test gpu::recomp::tests::scalar_relative_move_cluster ... ok
+test hle::d3d12x::sparse::tests::early_commits_are_the_pages_a_page_set_holds ... ok
+test gpu::tiling::tests::high_coordinate_tables_keep_their_offsets_at_one_period ... ok
+
+test result: ok. 1098 passed; 0 failed; 26 ignored; 0 measured; 0 filtered out; finished in 33.63s
+
+     Running unittests src\main.rs (target\debug\build\xcl/046e8b6181699ce9\out\xcl-046e8b6181699ce9.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\bcpack_parity.rs (target\debug\build\xcl/04dbe9f06f1284b9\out\bcpack_parity-04dbe9f06f1284b9.exe)
+
+running 1 test
+test retail_chunks_match_the_reference ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\console_dlls_e2e.rs (target\debug\build\xcl/5c3b637ab66b1710\out\console_dlls_e2e-5c3b637ab66b1710.exe)
+
+running 13 tests
+test console_crt_dlls_load_and_run ... ok
+test bink2_console_dll_decodes_a_game_movie ... ok
+test xbox_bvh_builder_builds_a_tlas_on_the_gpu ... ok
+test libhttpclient_initialises_through_the_xgameruntime_thunks ... ok
+test other_console_dlls_map_and_initialise ... ok
+test memory_cap_is_active ... ok
+test fsr4_console_upscaler_creates_a_context_probe ... ok
+test xbox_bvh_builder_on_xcl_device_probe ... ok
+test xbox_bvh_builder_builds_on_the_gpu ... ok
+test xbox_bvh_builder_prebuild_sizes ... ok
+test xbox_bvh_builder_records_into_a_fake_console_list ... ok
+test xbox_bvh_builder_rehydrates_game_geometry ... ok
+test xbox_bvh_builder_shaders_get_no_argument_in_a_register_they_do_not_have ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\console_shaders.rs (target\debug\build\xcl/07bcbf9860342c81\out\console_shaders-07bcbf9860342c81.exe)
+
+running 7 tests
+test print_a_console_compile ... ignored
+test print_graphics_root_argument_capacity ... ignored
+test print_graphics_root_argument_placement ... ignored
+test print_root_argument_placement ... ignored
+test console_compiled_derivatives_hold_on_triangle_edges ... ok
+test console_compiled_graphics_reads_its_root_arguments ... ok
+test console_compiled_kernels_match_the_pc_compile ... ok
+
+test result: ok. 3 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\d3d12_resource_and_sync.rs (target\debug\build\xcl/ea02fff9735ddb37\out\d3d12_resource_and_sync-ea02fff9735ddb37.exe)
+
+running 3 tests
+xcl: D3D12: Agility SDK v620 (D:\xlc-legacy-gpu-backend\third_party\agility\build\native\bin\x64)
+xcl: UMA: 3 sparse VRAM window(s) (12 GiB VA) + 1 coherent window(s) (512 MB) at 0x400000000
+xcl: D3D12.X: UMA import check: ok, 1 window(s), 43802 µs
+xcl: D3D12.X: 3 sparse window(s) for the title's own memory (tiled buffers on video memory)
+xcl: D3D12.X: UMA opened (3 sparse VRAM window(s), 512 MB coherent window), window 0 buffer at VA 0x2c4400000
+xcl: D3D12.X: native dynamic depth bias (OPTIONS16): supported (ID3D12GraphicsCommandList9::RSSetDepthBias)
+xcl: D3D12.X: ID3D12Device16 – 104 PC methods, 21 internal slots under the guard, +64 stubs (Device, PC vtable D3D12Core.dll+0x376ed0)
+xcl: D3D12.X: device 0x1bd5741fd10 for the title
+xcl: D3D12.X: device 0x1bd5741fd10 for the title
+xcl: D3D12.X: device 0x1bd5741fd10 for the title
+xcl: D3D12.X: ID3D12DescriptorHeap – 11 PC methods, 367 internal slots under the guard, +64 stubs (DescriptorHeap, PC vtable D3D12Core.dll+0x379228)
+xcl: D3D12.X: ID3D12Resource3 – 20 PC methods, 512 internal slots under the guard, +64 stubs (Resource, PC vtable D3D12Core.dll+0x378720)
+xcl: D3D12.X: Map of a resource not in unified memory → 0x80070057 (Some((1, 4096, 1, 0, 0)))
+xcl: D3D12.X: Map of a resource not in unified memory → 0x80070057 (Some((3, 16, 16, 28, 0)))
+xcl: D3D12.X: Map of a resource not in unified memory → 0x80070057 (Some((3, 16, 16, 28, 0)))
+xcl: D3D12.X: Map of a resource not in unified memory → 0x80070057 (Some((3, 128, 128, 28, 0)))
+xcl: D3D12.X: GetGPUVirtualAddress of a committed 16x16 texture (format 28, flags 0x0): 0x20000 bytes at 0x1bd60770000 for the title to write through (not uploaded)
+xcl: console descriptor heaps: one shader-visible PC heap of 1000000 view descriptors for all of them
+xcl: D3D12.X: ID3D12Heap1 – 10 PC methods, 512 internal slots under the guard, +64 stubs (Heap, PC vtable D3D12Core.dll+0x3787f8)
+xcl: console descriptor heap 0x1bd5dc57870: 16 view slots at sparse VRAM 0x10000, shader visible
+xcl: console descriptor heap 0x1bd5dc56eb0: 8 sampler slots at sparse VRAM 0x10000, shader visible
+test descriptor_heap_console_start_handles_match_host_and_console_heap ... ok
+xcl: D3D12.X: ID3D12Fence1 – 12 PC methods, 396 internal slots under the guard, +64 stubs (Fence, PC vtable D3D12Core.dll+0x379138)
+test resource_map_unmap_write_and_gpu_va_match_host_and_console_contracts ... ok
+xcl: D3D12.X: ID3D12CommandQueue1 – 23 PC methods, 512 internal slots under the guard, +64 stubs (CommandQueue, PC vtable D3D12Core.dll+0x3788f8)
+xcl: D3D12.X: queue #18 before the title's first Signal / Wait: the queue layout is not known yet, GetDesc writes only its first 8 bytes
+xcl: D3D12.X: ID3D12CommandAllocator – 9 PC methods, 512 internal slots under the guard, +64 stubs (CommandAllocator, PC vtable D3D12Core.dll+0x378b60)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1bd651c13b8)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 512 internal slots under the guard, +64 stubs (CommandList, PC vtable D3D12Core.dll+0x45a720)
+xcl: D3D12.X: title ID3D12CommandQueue::Wait on q0 fence 0x1bd6508fd90 >= 0x2
+test fence_and_command_queue_sync_timing_and_allocator_reset_match_host_and_console ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.48s
+
+     Running tests\disasm_e2e.rs (target\debug\build\xcl/856cd1a9fc55a5cb\out\disasm_e2e-856cd1a9fc55a5cb.exe)
+
+running 5 tests
+test disasm_missing_file_exits_code_two ... ok
+test disasm_file_without_rdna2_programs_reports_diagnostic ... ok
+test disasm_offset_past_eof_exits_code_two ... ok
+test disasm_all_flag_disassembles_past_endpgm ... ok
+test disasm_honors_byte_range_options ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests\e2e.rs (target\debug\build\xcl/7eaa94cf13efc693\out\e2e-7eaa94cf13efc693.exe)
+
+running 3 tests
+SKIPPED test_title_draws_with_a_root_signature_under_the_debug_layer: no xgameruntime.dll
+test test_title_draws_with_a_root_signature_under_the_debug_layer ... ok
+test launcher_uses_configured_exe_in_an_ambiguous_folder ... ok
+--- stdout ---
+XCL 0.1.0 – starting 'XCL.TestTitle'
+  exe:   D:\xlc-legacy-gpu-backend\target\tmp\e2e\game\xcl_testtitle.exe
+  data:  D:\xlc-legacy-gpu-backend\target\tmp\e2e\data\XCL.TestTitle
+  MicrosoftGame.Config: title memory Advanced, PLS 2048 MB
+  console: imports kernelx.dll, xgameruntime.dll
+  GPU: NVIDIA GeForce GTX 1080 (8059 MiB VRAM)
+  WARNING: no mesh shaders: the game's geometry and NGG programs are not drawn
+           → a GPU with D3D12 mesh shaders is needed (NVIDIA RTX 20 / GTX 16 or newer, AMD RX 6000 or newer, Intel Arc)
+  NOTE: waves of 32–32 lanes: the console's 64-lane programs run as two 32-lane halves (slower; vertex / pixel shaders that read lanes 32–63 can differ)
+  DXC 1.9.2602.17 (21d28f72): C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64
+  WARNING: no System32\xgameruntime.dll: dialogs, text entry, game invites and game streaming are missing (XCL's own task queues, async and networking are used)
+           → install Gaming Services (Microsoft Store)
+xcl_testtitle: start
+[PASS] argv: command line belongs to the game
+[PASS] static TLS: template on main thread
+[PASS] static TLS: every new thread gets its own initialised copy
+[PASS] C++-style exceptions: panic is caught (RtlPcToFileHeader)
+[PASS] kernelx: GetConsoleType / XSystemGetDeviceType
+[PASS] kernelx: XMemAlloc alignment + zeroing
+[PASS] kernelx: XMemVirtualAlloc – graphics memory type in UMA, others from Windows
+[PASS] xmem: working-set statistics, physical pages mapped and freed
+[PASS] xmem: physical pages mapped into reserved address space keep their contents
+[PASS] kernelx: graphics memory lives in the GPU-visible 4 GiB-aligned region (UMA)
+[PASS] user32: a top-level window made either way (CreateWindowExW / A) is the hidden 1920x1080 console screen
+[PASS] GameInput: GameInputCreate reaches the system GameInput (timestamps advance)
+[PASS] kernelx: TitleMemoryStatus
+[PASS] kernelx: SetThreadName / GetThreadName
+[PASS] kernelx: unimplemented import becomes a stub and the title keeps running
+[PASS] modules: GetModuleHandle(NULL) is the game image
+[PASS] modules: LoadLibrary/GetProcAddress on an HLE module
+[PASS] game DLL: static import + DllMain + TLS + its own kernelx import
+[PASS] files: console paths G:\ and GAME: read from the game folder
+[PASS] files: CRT fopen goes through the VFS too
+[PASS] files: writes go to the overlay, game folder untouched
+[PASS] files: delete hides the file without touching the original
+[PASS] files: directory listing merges overlay and hides deleted files
+[PASS] files: T:\ title scratch storage
+[PASS] files: T:\ free space (the host volume behind the mount)
+[PASS] XGameRuntime: initialize + package identity
+[PASS] XTaskQueue: manual, delayed and thread-pool dispatch
+[PASS] XUser: silent sign-in, device association, and no XSTS token offline
+[PASS] XTaskQueue composite + XNetworking + advapi32legacy LSA fallback
+[PASS] storage: save folder + persistent local storage
+[PASS] XPersistentLocalStorage: a drive root, as on the console
+[PASS] D3D12.X: queue + fence signal on the GPU
+[PASS] D3D12.X: shaders captured; console shader gets a fallback PSO
+[PASS] D3D12.X: retail-format console shader (XDAT/XBCH/FSSM) captured + fallback PSO
+[PASS] D3D12.X: triangle rendered on the real GPU and read back (console + derived pipeline)
+[PASS] D3D12.X: frame clock + PresentX of the title's back buffer
+[PASS] D3D12.X: console device methods (placed title memory, DMA queue + list, page pools)
+[PASS] D3D12.X: console command list memory methods (writes, timestamp, fill, copy, KickoffX, Wait32/64)
+[PASS] D3D12.X: sparse VRAM buffer heaps (placed aliasing, persistent Map coherence, readback)
+[PASS] D3D12.X: coherent window headroom (CUSTOM+WRITE_BACK & oversized READBACK in sparse VRAM)
+[PASS] D3D12.X: async ring-buffered sparse uploads (80 MiB across 20 submits + reused-tile zeroing)
+[PASS] D3D12.X: descriptor heaps still in window 0 after an 8 GiB+ graphics reservation
+[PASS] D3D12.X: committed textures beyond the coherent room are created; a readback buffer still gets coherent memory
+[PASS] D3D12.X: dynamic depth bias via RSSetDepthBiasX (#94)
+[PASS] D3D12.X: raytracing surface (OPTIONS5, AS SRV descriptor, #146/#148 BVH list slots)
+[PASS] DirectStorage (xcrdapi): a file read into memory, status + D3D12 fence
+[PASS] D3D12.X: a texture in title memory (XG layout, #44) follows CPU writes
+[PASS] D3D12.X: a texture in a streaming pool gets its texels once pages are mapped in
+[PASS] MFPlat: MFResetDXGIDeviceManagerX resets IMFDXGIDeviceManager with the d3d12_xs device
+  (XMA2 buffer ended after 92 ms; Opus buffer ended after 92 ms)
+[PASS] XAudio2: console flags/device, XMA2 & Opus voices decoded, PCM passes, callbacks
+xcl_testtitle: done, failures: 0
+
+Game exited with code 0x0 (0)
+Missing on this PC (see the start of the run):
+  WARNING: no mesh shaders: the game's geometry and NGG programs are not drawn
+           → a GPU with D3D12 mesh shaders is needed (NVIDIA RTX 20 / GTX 16 or newer, AMD RX 6000 or newer, Intel Arc)
+  WARNING: no System32\xgameruntime.dll: dialogs, text entry, game invites and game streaming are missing (XCL's own task queues, async and networking are used)
+           → install Gaming Services (Microsoft Store)
+Imports: 237 (game-dll:testgame_mw.dll: 4, hle:gameinput.dll: 1, hle:kernelx.dll: 29, hle:mfplat.dll: 1, hle:xaudio2_9.dll: 1, hle:xcrdapi.dll: 1, hle:xg_xs.dll: 1, hle:xgameruntime.dll: 24, stub: 1, system: 174)
+Unimplemented functions called (2):
+         1×  kernelx.dll!XclDefinitelyMissingFunction   (first call: xcl_testtitle.exe+0x5edde)
+         1×  d3d12_xs.dll!ID3D12Device8::#47 (console extension)   (first call: xcl_testtitle.exe+0x2c385)
+Writes to game files redirected to the overlay: 5
+Report: D:\xlc-legacy-gpu-backend\target\tmp\e2e\data\XCL.TestTitle\logs\report.json
+Log:    D:\xlc-legacy-gpu-backend\target\tmp\e2e\data\XCL.TestTitle\logs\xcl.log
+
+--- stderr ---
+xcl: DXC: dxcompiler 1.9.2602.17 (21d28f72), dxil 1.9.2602.17, from C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64
+xcl: XCL 0.1.0 – host for 'XCL.TestTitle'
+xcl: game: D:\xlc-legacy-gpu-backend\target\tmp\e2e\game\xcl_testtitle.exe (read-only folder: D:\xlc-legacy-gpu-backend\target\tmp\e2e\game)
+xcl: XCL data: D:\xlc-legacy-gpu-backend\target\tmp\e2e\data\XCL.TestTitle
+xcl: console: Xbox Series X (anaconda) (title memory 13824 MiB, mode advanced)
+xcl: timer: finest resolution for the title (was 0.50 ms, now 0.50 ms; kept while the window is hidden: no)
+xcl: VFS: 31 file hooks active
+xcl: loaded xcl_testtitle.exe @ 0x140000000 (size 0xf7000, preferred 0x140000000)
+xcl: loaded testgame_mw.dll @ 0x180000000 (size 0x21000, preferred 0x180000000)
+xcl: VFS: CreateFileW(D:\xlc-legacy-gpu-backend\target\tmp\e2e\data\XCL.TestTitle\cache) flags 0x2000000
+xcl: TLS: testgame_mw.dll: template 97 B, block 112 B, index 11, threads initialized: 1
+xcl: DllMain(testgame_mw.dll, PROCESS_ATTACH)
+xcl: VFS: CreateFileW(D:\xlc-legacy-gpu-backend\target\tmp\e2e\data\XCL.TestTitle\cache) flags 0x2000000
+xcl: TLS: xcl_testtitle.exe: template 113 B, block 128 B, index 12, threads initialized: 1
+xcl: TLS: xcl_testtitle.exe has slot 0 (as a process's executable); xcl.exe's own TLS is in slot 12 – 4 threads
+xcl: D3D12: Agility SDK unavailable (XCL_D3D12_DIR=D:\xlc-legacy-gpu-backend\third_party\agility\build\native\bin\x64 has no D3D12Core.dll) – using inbox D3D12
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrssel.bin) flags 0x210400
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrssel.bin) flags 0x80
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrsdb0.bin) flags 0x210400
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrsdb0.bin) flags 0x80
+xcl: VFS: CreateFileW(d:\xlc-legacy-gpu-backend\target\debug\petromod_nvidia_profile_identifier.ogl) flags 0x80
+xcl: VFS: CreateFileW(d:\xlc-legacy-gpu-backend\target\debug\petromod_nvidia_profile_identifier.ogl) flags 0x80
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrssel.bin) flags 0x210400
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrssel.bin) flags 0x80
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrsdb0.bin) flags 0x210400
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrsdb0.bin) flags 0x80
+xcl: VFS: CreateFileW(d:\xlc-legacy-gpu-backend\target\debug\petromod_nvidia_profile_identifier.ogl) flags 0x80
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrssel.bin) flags 0x210400
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrssel.bin) flags 0x80
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrsdb0.bin) flags 0x210400
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrsdb0.bin) flags 0x80
+xcl: VFS: CreateFileW(d:\xlc-legacy-gpu-backend\target\debug\petromod_nvidia_profile_identifier.ogl) flags 0x80
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrssel.bin) flags 0x210400
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrssel.bin) flags 0x80
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvAppTimestamps) flags 0x210400
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrsdb0.bin) flags 0x210400
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvAppTimestamps) flags 0x80
+xcl: VFS: CreateFileW(C:\ProgramData\NVIDIA Corporation\Drs\nvdrsdb0.bin) flags 0x80
+xcl: GetDiskFreeSpaceExA(\\?\C:\Users\<USER>\appdata\locallow\NVIDIA\DXCache\): 24223 MiB available of 487799 MiB
+xcl: UMA: 3 sparse VRAM window(s) (12 GiB VA) + 1 coherent window(s) (512 MB) at 0x400000000
+xcl: D3D12.X: UMA import check: ok, 1 window(s), 26131 µs
+xcl: D3D12.X: 3 sparse window(s) for the title's own memory (tiled buffers on video memory)
+xcl: D3D12.X: UMA opened (3 sparse VRAM window(s), 512 MB coherent window), window 0 buffer at VA 0x2c4400000
+xcl: D3D12.X: native dynamic depth bias (OPTIONS16): unsupported (using patched-PSO fallback)
+xcl: D3D12.X: ID3D12Device8 – 73 PC methods, 97 internal slots under the guard, +64 stubs (Device, PC vtable D3D12Core.dll+0x13d1e8)
+xcl: D3D12.X: backend 'real' – NVIDIA GeForce GTX 1080 (8059 MiB VRAM)
+xcl: start xcl_testtitle.exe: entry point xcl_testtitle.exe+0xb3a00 , stack 0x100000
+xcl: C++ exception rust_panic "�@" thrown; on the stack: xcl_testtitle.exe+0xcd464, xcl_testtitle.exe+0xcd464, xcl_testtitle.exe+0xcd464, xcl_testtitle.exe+0x8ca76, xcl_testtitle.exe+0xcd464, xcl_testtitle.exe+0xcd464
+xcl: D3D12.X: ID3D12Heap1 – 10 PC methods, 512 internal slots under the guard, +64 stubs (Heap, PC vtable D3D12Core.dll+0x13e210)
+xcl: user: the title's window 0xa80482 is the console's screen (1920x1080, no frame, cloaked)
+xcl: user: the title's window 0x1bb07d6 is the console's screen (1920x1080, no frame, cloaked)
+xcl: GameInput: GameInputCreate – one gamepad (XInput controller / keyboard)
+xcl: [STUB] kernelx.dll!XclDefinitelyMissingFunction first called from xcl_testtitle.exe+0x5edde → returning 0x0
+xcl: GetProcAddress(kernelx.dll, XNoSuchApiAnywhere) → NULL (not implemented)
+xcl: [VFS] write to a game file redirected to the overlay: data\hello.txt
+xcl: [VFS] write to a game file redirected to the overlay: data\new_save.bin
+xcl: [VFS] write to a game file redirected to the overlay: data\newdir\deeper
+xcl: [VFS] write to a game file redirected to the overlay: data\renamed.bin
+xcl: [VFS] write to a game file redirected to the overlay: data\delete_me.txt
+xcl: GetDiskFreeSpaceExW(T:\) (host D:\xlc-legacy-gpu-backend\target\tmp\e2e\data\XCL.TestTitle\temp): 448793 MiB available of 488383 MiB
+xcl: GetDiskFreeSpaceW(T:\) (host D:\xlc-legacy-gpu-backend\target\tmp\e2e\data\XCL.TestTitle\temp): 448793 MiB available of 488383 MiB
+xcl: XGameRuntimeInitialize (XCL offline runtime)
+xcl: XUserAddAsync(options=0x1) → local offline user 'Player1'
+xcl: XUser: the local user reached the title (XUserAddResult); 0 device association callback(s)
+xcl: XUser: token #0 for GET https://example.invalid/hotfix – none: no Xbox Live (0x80072EFD)
+xcl: GetDiskFreeSpaceExW(S:/Users/xcl/games) (host D:\xlc-legacy-gpu-backend\target\tmp\e2e\data\XCL.TestTitle\pls\Users\xcl\games): 2047 MiB available of 2048 MiB
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: D3D12.X: ID3D12CommandQueue – 19 PC methods, 482 internal slots under the guard, +64 stubs (CommandQueue, PC vtable D3D12Core.dll+0x13e330)
+xcl: D3D12.X: ID3D12Fence1 – 12 PC methods, 256 internal slots under the guard, +64 stubs (Fence, PC vtable D3D12Core.dll+0x13ea78)
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: [SHADER] rootsig a6b4665d1ef3de87: 68 B, format dxbc, parts [RTS0]
+xcl: D3D12.X: ID3D12RootSignature – 8 PC methods, 247 internal slots under the guard, +64 stubs (RootSignature, PC vtable D3D12Core.dll+0x13eae0)
+xcl: [SHADER] vs 59de38f958e2f013: 528 B, format dxbc, parts [RDEF,ISGN,OSGN,SHEX,STAT]
+xcl: [SHADER] ps 8a5d1b6c5b50f11e: 56 B, format container-unknown, parts [XBOX]
+xcl: [SHADER] 8a5d1b6c5b50f11e: RDNA2 code found – disassembly in D:\xlc-legacy-gpu-backend\target\tmp\e2e\data\XCL.TestTitle\shaders\8a5d1b6c5b50f11e_ps.rdna2.txt
+xcl: D3D12.X: ID3D12PipelineState – 9 PC methods, 379 internal slots under the guard, +64 stubs (PipelineState, PC vtable D3D12Core.dll+0x13e6b8)
+xcl: D3D12.X: graphics PSO rejected by the driver (0x80004005) – fallback shaders used (#1)
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: [SHADER] ps 44871e939431b2e3: 204 B, format xbox-native, parts [DXIL]
+xcl: [SHADER] 44871e939431b2e3: console container PS SM 6.6, FSSM [PS], 2 RDNA2 instructions
+xcl: D3D12.X: graphics PSO rejected by the driver (0x80070057) – fallback shaders used (#2)
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: [SHADER] vs 04ef3b5b06edae7c: 688 B, format dxbc, parts [RDEF,ISGN,OSGN,SHEX,STAT]
+xcl: [SHADER] ps 1eb6d31c9e4c3658: 452 B, format dxbc, parts [RDEF,ISGN,OSGN,SHEX,STAT]
+xcl: D3D12.X: CreateDerivedPipelineStateX – unknown patch part 4
+xcl: D3D12.X: ID3D12Resource2 – 17 PC methods, 512 internal slots under the guard, +64 stubs (Resource, PC vtable D3D12Core.dll+0x13e100)
+xcl: D3D12.X: a small render target at 0x700000000 (2 planes) is kept in step with the title's memory – a glyph cache the CPU fills (1 so far)
+xcl: D3D12.X: ID3D12DescriptorHeap – 11 PC methods, 236 internal slots under the guard, +64 stubs (DescriptorHeap, PC vtable D3D12Core.dll+0x13eb20)
+xcl: console buffers in UMA: Map = console address (0x700020000)
+xcl: D3D12.X: ID3D12QueryHeap – 8 PC methods, 227 internal slots under the guard, +64 stubs (QueryHeap, PC vtable D3D12Core.dll+0x13eb80)
+xcl: D3D12.X: ID3D12CommandAllocator – 9 PC methods, 398 internal slots under the guard, +64 stubs (CommandAllocator, PC vtable D3D12Core.dll+0x13e620)
+xcl: D3D12.X: ID3D12GraphicsCommandList6 – 80 PC methods, 512 internal slots under the guard, +64 stubs (CommandList, PC vtable D3D12Core.dll+0x19a070)
+xcl: D3D12.X: nested occlusion query – the outer one ends there and reports visible, the inner one counts
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: D3D12.X: frame interval 16667 µs (periodicity 1, flags 0x0)
+xcl: D3D12.X: a small render target at 0x700020000 (2 planes) is kept in step with the title's memory – a glyph cache the CPU fills (2 so far)
+xcl: D3D12.X: PresentX – the title presents its own frames (1 plane(s))
+xcl: XCL window created (1280x720)
+xcl: keyboard and mouse play as the gamepad (WASD left stick, mouse right stick, mouse buttons triggers, wheel bumpers)
+xcl: D3D12.X: QueryInterface(54ec77fa-1377-44e6-8c32-88fd5f44c84c) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: QueryInterface(b898d4fd-b5b3-4ffc-8694-0259864ffcf8) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: QueryInterface(db6f6ddb-ac77-4e88-8253-819df9bbf140) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: QueryInterface(9b7e4a00-342c-4106-a19f-4f2704f689f0) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: QueryInterface(85611e73-70a9-490e-9614-a9e302777904) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: QueryInterface(a2a9f815-4778-40d1-b179-d5d3a1a5f1bc) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: QueryInterface(79cf2233-7536-4948-9d36-1e4692dc5760) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: QueryInterface(cbe8c719-71a3-40ed-a3ad-a05161dcb833) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: QueryInterface(5c4feebc-cd7d-4938-bc9d-d99064d06442) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: QueryInterface(0adf7d52-929c-4e61-addb-ffed30de66ef) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: QueryInterface(aec22fb8-76f3-4639-9be0-28eb43a67a2e) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: QueryInterface(ffffffff-1bbe-4d12-afbf-8fdf7e0a87c7) – interface unknown on the PC (console-only?)
+xcl: present: swap chain 640x360 DXGI_FORMAT(28) – the game image will appear in the XCL window
+xcl: present: first game frame shown (640x360)
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: D3D12.X: ID3D12GraphicsCommandList6 – 80 PC methods, 512 internal slots under the guard, +64 stubs (CommandList, PC vtable D3D12Core.dll+0x19a850)
+xcl: D3D12.X: ID3D12GraphicsCommandList6 – 80 PC methods, 512 internal slots under the guard, +64 stubs (DmaList, PC vtable D3D12Core.dll+0x19a850)
+xcl: [STUB] d3d12_xs.dll!ID3D12Device8::#47 (console extension) first called from xcl_testtitle.exe+0x2c385 → returning 0x0
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: D3D12.X: CopyMemoryToMemoryX same-window scratch copies recorded: 1
+xcl: D3D12.X: 1 allocator resets so far with recordings still held or on the GPU – another PC allocator took its place (1 made, 1 put aside now)
+xcl: D3D12.X: 2 allocator resets so far with recordings still held or on the GPU – another PC allocator took its place (1 made, 1 put aside now)
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: D3D12.X: heap 0x1a3b9000 (0x40000 bytes) holds buffers: in sparse VRAM at 0x420010000
+xcl: D3D12.X: 4 allocator resets so far with recordings still held or on the GPU – another PC allocator took its place (2 made, 1 put aside now)
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: D3D12.X: heap 0x1a3b7a40 (0x100000 bytes) holds buffers: in sparse VRAM at 0x420110000
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: sparse windows: 16 submits, 159 MB of CPU writes uploaded, 40 ms spent, 1280 tiles mapped
+xcl: sparse windows timing: write-watch 3 ms (3372 dirty pages), lock wait 0 ms, chunk scan 22 ms, upload 16 ms (2371 runs)
+xcl: sparse windows: 32 submits, 223 MB of CPU writes uploaded, 164 ms spent, 1280 tiles mapped
+xcl: sparse windows timing: write-watch 7 ms (19756 dirty pages), lock wait 0 ms, chunk scan 138 ms, upload 25 ms (2387 runs)
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: console descriptor heaps: one shader-visible PC heap of 1000000 view descriptors for all of them
+xcl: console descriptor heap 0x19f569d0: 442368 view slots at sparse VRAM 0x10000, shader visible
+xcl: console descriptor heap 0x19f569d0: 512 sampler slots at sparse VRAM 0x10000, shader visible
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: [SHADER] vs a4b1ee9aee1ae591: 688 B, format dxbc, parts [RDEF,ISGN,OSGN,SHEX,STAT]
+xcl: D3D12.X: CreatePlacedResourceX at 0x700120000 (dimension 3 64x64 format 28 flags 0x1) – aliases an earlier resource there (dimension 3 512x512 format 28 flags 0x0)
+xcl: D3D12.X: CreatePlacedResourceX texture at 0x700140000 (dimension 3 64x64x1, 1 mips, format 40, 1 samples, layout 0x0, flags 0x2): not kept in step with the memory (a render target / depth buffer)
+xcl: D3D12.X: CreatePlacedResourceX at 0x700140000: dimension 3 64x64 format 40 flags 0x2 – a resource of its own (0x0)
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: D3D12.X: CheckFeatureSupport(D3D12_OPTIONS5) → RaytracingTier 10 (host 10)
+xcl: D3D12.X: CheckFeatureSupport(27) with the console's 16 bytes, the PC's 12 → 0x0
+xcl: console descriptor heap 0x19f57010: 2 view slots at sparse VRAM 0x10000, shader visible
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: DirectStorage: request #0: options 0x0 (file source), destination 0x453d9870 (512 bytes, page offset 0), source size 512, intermediate 0
+xcl: DirectStorage: request #1: options 0x200000 (file source), destination 0x1a79ed08 (physical pages) (512 bytes, page offset 128), source size 512, intermediate 0
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: D3D12.X: CreatePlacedResourceX at 0x420010000 (dimension 3 80x40 format 28 flags 0x0) – aliases an earlier resource there (dimension 1 65536x1 format 0 flags 0x0)
+xcl: D3D12.X: 8 allocator resets so far with recordings still held or on the GPU – another PC allocator took its place (5 made, 1 put aside now)
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: D3D12.X: device 0x29711d0 for the title
+xcl: mfplat: MFResetDXGIDeviceManagerX bridged ResetDevice failed: 0x80070057 (direct was 0x80070057)
+xcl: XAudio2: XAudio2Create – dropping console flags 0x41
+xcl: XAudio2: engine created (system XAudio2 2.9, flags 0x0)
+xcl: XAudio2: CreateMasteringVoice – dropping console flags 0x4
+xcl: XAudio2: CreateMasteringVoice – console device id ignored (default device)
+xcl: XAudio2: COM was not initialized on the title thread – CoInitializeEx(MTA) → 0x0
+xcl: XAudio2: XMA2 voice (1 ch., 48000 Hz) → real PCM16 decoding via hle::xma2
+xcl: Opus: decoder = Windows' MSOpusDecoder (Media Foundation)
+xcl: XAudio2: Opus voice (1 ch., 48000 Hz) → real PCM16 decoding via MSOpusDecoder
+xcl: process ends (thread 13692); on the stack: xcl_testtitle.exe+0xca590, xcl_testtitle.exe+0x943bd, xcl_testtitle.exe+0xccc00, xcl_testtitle.exe+0xea068, xcl_testtitle.exe+0x95330, xcl_testtitle.exe+0xca820, xcl_testtitle.exe+0xbee00, xcl_testtitle.exe+0x9ae5b, xcl_testtitle.exe+0xea1e0, xcl_testtitle.exe+0x9d570, xcl_testtitle.exe+0xcbbd0, xcl_testtitle.exe+0xcaca8, xcl_testtitle.exe+0x9bdb9, xcl_testtitle.exe+0xcc790, xcl_testtitle.exe+0xea050, xcl_testtitle.exe+0xbf730
+
+test test_title_runs_and_game_folder_is_untouched ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.05s
+
+     Running tests\gpu_compute_e2e.rs (target\debug\build\xcl/31872bbfdbd3a869\out\gpu_compute_e2e-31872bbfdbd3a869.exe)
+
+running 4 tests
+xcl: DXC: dxcompiler 1.9.2602.17 (21d28f72), dxil 1.9.2602.17, from C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64
+xcl: D3D12: Agility SDK v620 (D:\xlc-legacy-gpu-backend\third_party\agility\build\native\bin\x64)
+xcl: UMA: 3 sparse VRAM window(s) (12 GiB VA) + 1 coherent window(s) (512 MB) at 0x400000000
+xcl: D3D12.X: UMA import check: ok, 1 window(s), 28431 µs
+xcl: D3D12.X: 3 sparse window(s) for the title's own memory (tiled buffers on video memory)
+xcl: D3D12.X: UMA opened (3 sparse VRAM window(s), 512 MB coherent window), window 0 buffer at VA 0x2c4400000
+xcl: D3D12.X: native dynamic depth bias (OPTIONS16): supported (ID3D12GraphicsCommandList9::RSSetDepthBias)
+xcl: D3D12.X: ID3D12Device16 – 104 PC methods, 21 internal slots under the guard, +64 stubs (Device, PC vtable D3D12Core.dll+0x376ed0)
+xcl: D3D12.X: backend 'real' – NVIDIA GeForce GTX 1080 (8059 MiB VRAM)
+xcl: [SHADER] rootsig 900349563f559343: 68 B, format dxbc, parts [RTS0]
+xcl: D3D12.X: QueryInterface(0742a90b-c387-483f-b946-30a7e4e61458) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: ID3D12RootSignature1 – 10 PC methods, 18 internal slots under the guard, +64 stubs (RootSignature, PC vtable D3D12Core.dll+0x4599e0)
+xcl: [SHADER] cs d632a05c071e2f41: 212 B, format xbox-native, parts [DXIL]
+xcl: D3D12.X: ID3D12PipelineState1 – 10 PC methods, 8 internal slots under the guard, +64 stubs (PipelineState, PC vtable D3D12Core.dll+0x459a30)
+xcl: D3D12.X: pipelines whose shaders are not compiled yet get a stand-in and are built in the background
+xcl: [SHADER] rootsig 8a809727643f6cfe: 212 B, format dxbc, parts [RTS0]
+xcl: D3D12.X: compute PSO with the translated console CS (3744 B DXIL, 1 ms)
+backend device: NVIDIA GeForce GTX 1080 (8059 MiB VRAM)
+test async_compute_pso_registers_real_pso_and_not_standin ... ok
+xcl: [SHADER] cs f762fc1473e87d61: 308 B, format xbox-native, parts [DXIL]
+xcl: D3D12.X: compute PSO with the translated console CS (6128 B DXIL, 1 ms)
+xcl: D3D12.X: ID3D12CommandQueue1 – 23 PC methods, 512 internal slots under the guard, +64 stubs (CommandQueue, PC vtable D3D12Core.dll+0x3788f8)
+xcl: D3D12.X: ID3D12Fence1 – 12 PC methods, 396 internal slots under the guard, +64 stubs (Fence, PC vtable D3D12Core.dll+0x379138)
+xcl: D3D12.X: ID3D12Resource3 – 20 PC methods, 512 internal slots under the guard, +64 stubs (Resource, PC vtable D3D12Core.dll+0x378720)
+xcl: D3D12.X: ID3D12CommandAllocator – 9 PC methods, 512 internal slots under the guard, +64 stubs (CommandAllocator, PC vtable D3D12Core.dll+0x378b60)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x247b84539f8)
+xcl: D3D12.X: ID3D12DescriptorHeap – 11 PC methods, 367 internal slots under the guard, +64 stubs (DescriptorHeap, PC vtable D3D12Core.dll+0x379228)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 512 internal slots under the guard, +64 stubs (CommandList, PC vtable D3D12Core.dll+0x45a720)
+no heap windows (opt-in: XCL_HEAP_WINDOWS=1; or no shared heap) – skipping
+SKIPPED heap_window_out_of_memory_falls_back_to_the_switch_form: no heap windows
+test console_wave64_compute_through_the_pso_hook_dispatch_and_read_back ... ok
+test heap_window_out_of_memory_falls_back_to_the_switch_form ... ok
+test offline_compute_pipeline_is_reused_by_a_second_process ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.93s
+
+     Running tests\gpu_pso_e2e.rs (target\debug\build\xcl/d634d8948967a30e\out\gpu_pso_e2e-d634d8948967a30e.exe)
+
+running 7 tests
+XCL_SAMPLE_RPF not set – skipping
+XCL_SAMPLE_RPF not set – skipping
+XCL_SAMPLE_RPF not set – skipping
+XCL_SAMPLE_RPF not set – skipping
+XCL_SAMPLE_RPF not set – skipping
+XCL_SAMPLE_RPF not set – skipping
+test retail_es_gs_voxelize_geometry_mode ... ok
+test retail_gs_pipeline_through_the_hook ... ok
+test retail_mesh_pipelines_through_the_hook ... ok
+test retail_pipelines_built_in_the_background_behind_a_stand_in ... ok
+test retail_textured_ps_decoded_descriptors_and_a_descriptor_change_between_draws ... ok
+test retail_vs_ps_through_the_pso_hook_render_and_read_back ... ok
+test sample_pack_read_errors_fail_instead_of_skipping ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests\heap_probe.rs (target\debug\build\xcl/980c9123c5d5930a\out\heap_probe-980c9123c5d5930a.exe)
+
+running 4 tests
+test heaps_over_partly_committed_sections ... ignored
+test heaps_over_sections_in_a_placeholder ... ignored
+test view_heap_capacity ... ignored
+test window_sized_reserved_buffer_on_video_memory_tiles ... ignored
+
+test result: ok. 0 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\low_va.rs (target\debug\build\xcl/218dc7d54f29dbf0\out\low_va-218dc7d54f29dbf0.exe)
+
+running 1 test
+test xcl_exe_is_linked_without_high_entropy_va ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\pls_quota.rs (target\debug\build\xcl/b6d63d09f070203e\out\pls_quota-b6d63d09f070203e.exe)
+
+running 1 test
+xcl: VFS: 31 file hooks active
+xcl: GetDiskFreeSpaceExW(C:\Users\<USER>\AppData\Local\Temp\xcl_pls_quota_17872_1795622486795804800\data\pls): 24223 MiB available of 487799 MiB
+xcl: GetDiskFreeSpaceExW(s:/世界) (host C:\Users\<USER>\AppData\Local\Temp\xcl_pls_quota_17872_1795622486795804800\data\pls\世界): 0 MiB available of 1 MiB
+xcl: GetDiskFreeSpaceExA(S:\) (host C:\Users\<USER>\AppData\Local\Temp\xcl_pls_quota_17872_1795622486795804800\data\pls): 0 MiB available of 0 MiB
+xcl: GetDiskFreeSpaceExW(P:\) (host C:\Users\<USER>\AppData\Local\Temp\xcl_pls_quota_17872_1795622486795804800\data\pls): 0 MiB available of 1 MiB
+xcl: GetDiskFreeSpaceExW(T:\) (host C:\Users\<USER>\AppData\Local\Temp\xcl_pls_quota_17872_1795622486795804800\data\pls-other): 0 MiB available of 487799 MiB
+xcl: GetDiskFreeSpaceExW(S:\..\pls-other) (host C:\Users\<USER>\AppData\Local\Temp\xcl_pls_quota_17872_1795622486795804800\data\pls-other): 0 MiB available of 487799 MiB
+xcl: GetDiskFreeSpaceExW(S:\missing) (host C:\Users\<USER>\AppData\Local\Temp\xcl_pls_quota_17872_1795622486795804800\data\pls\missing) failed (error 3)
+test disk_free_space_ex_reports_pls_quota ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests\predication_e2e.rs (target\debug\build\xcl/e709c8a9eadf1c68\out\predication_e2e-e709c8a9eadf1c68.exe)
+
+running 1 test
+xcl: D3D12: Agility SDK v620 (D:\xlc-legacy-gpu-backend\third_party\agility\build\native\bin\x64)
+xcl: D3D12: debug layer enabled
+xcl: UMA: 3 sparse VRAM window(s) (12 GiB VA) + 1 coherent window(s) (512 MB) at 0x400000000
+xcl: D3D12.X: UMA import check: ok, 1 window(s), 24864 µs
+xcl: D3D12.X: 3 sparse window(s) for the title's own memory (tiled buffers on video memory)
+xcl: D3D12.X: UMA opened (3 sparse VRAM window(s), 512 MB coherent window), window 0 buffer at VA 0x2c4400000
+xcl: D3D12.X: native dynamic depth bias (OPTIONS16): supported (ID3D12GraphicsCommandList9::RSSetDepthBias)
+xcl: D3D12.X: ID3D12Device16 – 104 PC methods, 216 internal slots under the guard, +64 stubs (Device, PC vtable D3D12SDKLayers.dll+0x420c88)
+xcl: D3D12.X: backend 'real' – NVIDIA GeForce GTX 1080 (8059 MiB VRAM)
+xcl: D3D12.X: QueryInterface(2852dd88-b484-4c0c-b6b1-67168500e600) – interface unknown on the PC (console-only?)
+xcl: D3D12.X: ID3D12Resource3 – 20 PC methods, 512 internal slots under the guard, +64 stubs (Resource, PC vtable D3D12SDKLayers.dll+0x4220c0)
+xcl: D3D12.X: ID3D12CommandQueue1 – 23 PC methods, 512 internal slots under the guard, +64 stubs (CommandQueue, PC vtable D3D12SDKLayers.dll+0x422548)
+xcl: D3D12.X: ID3D12CommandAllocator – 9 PC methods, 512 internal slots under the guard, +64 stubs (CommandAllocator, PC vtable D3D12SDKLayers.dll+0x422500)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 512 internal slots under the guard, +64 stubs (CommandList, PC vtable D3D12SDKLayers.dll+0x4227c0)
+xcl: D3D12.X: ID3D12Fence1 – 12 PC methods, 419 internal slots under the guard, +64 stubs (Fence, PC vtable D3D12SDKLayers.dll+0x422db0)
+xcl: D3D12.X: 1 allocator resets so far with recordings still held or on the GPU – another PC allocator took its place (1 made, 1 put aside now)
+xcl: D3D12.X: 2 allocator resets so far with recordings still held or on the GPU – another PC allocator took its place (1 made, 1 put aside now)
+test set_predication_buffer_state_and_kickoff ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
+
+     Running tests\rpf_e2e.rs (target\debug\build\xcl/802ddfd3f8df9fc4\out\rpf_e2e-802ddfd3f8df9fc4.exe)
+
+running 2 tests
+test full_scan_and_streaming_probe_agree_on_header_evidence ... ok
+test explicit_probe_rejects_conflicting_options ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests\shaders_e2e.rs (target\debug\build\xcl/a2b6bdebe9b7b422\out\shaders_e2e-a2b6bdebe9b7b422.exe)
+
+running 4 tests
+test shaders_rpf9_pack_scans_records_and_counts_inflate_errors ... ok
+test shaders_folder_recurses_and_skips_side_files ... ok
+test shaders_handles_non_console_file_and_missing_path ... ok
+test shaders_single_file_reports_text_top_json_recomp_and_dxc_compile ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests\sparse_reinit.rs (target\debug\build\xcl/8c3e00c567f0e9ad\out\sparse_reinit-8c3e00c567f0e9ad.exe)
+
+running 1 test
+xcl: D3D12: Agility SDK v620 (D:\xlc-legacy-gpu-backend\third_party\agility\build\native\bin\x64)
+xcl: UMA: 3 sparse VRAM window(s) (12 GiB VA) + 1 coherent window(s) (512 MB) at 0x400000000
+xcl: D3D12.X: UMA import check: ok, 1 window(s), 27172 µs
+xcl: D3D12.X: 3 sparse window(s) for the title's own memory (tiled buffers on video memory)
+xcl: D3D12.X: UMA opened (3 sparse VRAM window(s), 512 MB coherent window), window 0 buffer at VA 0x2c4400000
+xcl: D3D12.X: native dynamic depth bias (OPTIONS16): supported (ID3D12GraphicsCommandList9::RSSetDepthBias)
+xcl: D3D12.X: ID3D12Device16 – 104 PC methods, 21 internal slots under the guard, +64 stubs (Device, PC vtable D3D12Core.dll+0x376ed0)
+xcl: D3D12.X: ID3D12Heap1 – 10 PC methods, 512 internal slots under the guard, +64 stubs (Heap, PC vtable D3D12Core.dll+0x3787f8)
+xcl: D3D12.X: ID3D12Resource3 – 20 PC methods, 512 internal slots under the guard, +64 stubs (Resource, PC vtable D3D12Core.dll+0x378720)
+xcl: D3D12.X: ID3D12CommandQueue1 – 23 PC methods, 512 internal slots under the guard, +64 stubs (CommandQueue, PC vtable D3D12Core.dll+0x3788f8)
+xcl: D3D12.X: ID3D12Fence1 – 12 PC methods, 396 internal slots under the guard, +64 stubs (Fence, PC vtable D3D12Core.dll+0x379138)
+xcl: D3D12.X: ID3D12CommandAllocator – 9 PC methods, 512 internal slots under the guard, +64 stubs (CommandAllocator, PC vtable D3D12Core.dll+0x378b60)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873e5aba08)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 512 internal slots under the guard, +64 stubs (CommandList, PC vtable D3D12Core.dll+0x45a720)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873e5ac418)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873e5aaff8)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873e5ace28)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873e5ad838)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873e5ae248)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873e5af668)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873e5aec58)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873e5b0078)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873e5b0a88)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873e5b1498)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873e5aa5e8)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873eb1e498)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873eb220f8)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873eb1c668)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873eb1eea8)
+xcl: D3D12.X: ID3D12GraphicsCommandList12 – 98 PC methods, 0 internal slots under the guard, +64 stubs (CommandList, PC vtable 0x1873eb216e8)
+xcl: D3D12.X: 3 sparse window(s) for the title's own memory (tiled buffers on video memory)
+test the_sparse_state_is_replaced_outside_its_lock ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
+
+     Running tests\texture_states.rs (target\debug\build\xcl/8084932a3ecf4f6d\out\texture_states-8084932a3ecf4f6d.exe)
+
+running 1 test
+per-subresource states: 0 debug-layer errors
+one state for all: 1 debug-layer errors, first: Some("ID3D12CommandQueue1::ExecuteCommandLists: Using ResourceBarrier on Command List (0x0000028251A0DD10:'Unnamed ID3D12GraphicsCommandList Object'): Before state (0xC0: D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) of resource (0x0000028251A065E0:'Unnamed ID3D12Resource Object') (subresource: 1) specified by transition barrier does not match with the state (0x800: D3D12_RESOURCE_STATE_COPY_SOURCE) specified in preceding ResourceBarrier or as InitialState")
+test uploads_start_from_each_subresources_state ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+     Running tests\xg_oracle.rs (target\debug\build\xcl/2b85e06a6330ce3d\out\xg_oracle-2b85e06a6330ce3d.exe)
+
+running 18 tests
+test print_accepted_modes ... ignored
+test print_console_layouts ... ignored
+test print_hardware_versions ... ignored
+test print_htile_sizes ... ignored
+test print_line_modes ... ignored
+test print_odd_offsets ... ignored
+test print_planes ... ignored
+test print_volumes_lines_and_samples ... ignored
+test print_xor_64kb_parts ... ignored
+test print_xor_bits ... ignored
+test layouts_match_the_console_library ... ok
+test print_z_tails ... ignored
+test line_layouts_match_the_console_library ... ok
+test render_target_and_depth_layouts_match ... ok
+test texel_offsets_and_the_console_pipe_configuration ... ignored
+test resource_tiling_matches_the_console_library ... ok
+test subresource_copies_match_the_console_library ... ok
+test volume_layouts_and_texels_match_the_console_library ... ok
+
+test result: ok. 6 passed; 0 failed; 12 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\build\xcl-testtitle/9d4ccc63446eae78\out\xcl_testtitle-9d4ccc63446eae78.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests xcl
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

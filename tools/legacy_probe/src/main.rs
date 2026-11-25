@@ -482,6 +482,7 @@ struct Features {
     /// what the runtime reported in HighestShaderModel
     highest_shader_model: String,
     resource_binding_tier: i32,
+    resource_heap_tier: i32,
     tiled_resources_tier: i32,
     view_instancing_tier: i32,
 }
@@ -679,10 +680,12 @@ fn main() {
             wave_max = o1.WaveLaneCountMax;
         }
         let mut resource_binding_tier = 0i32;
+        let mut resource_heap_tier = 0i32;
         let mut tiled_resources_tier = 0i32;
         let mut o = D3D12_FEATURE_DATA_D3D12_OPTIONS::default();
         if dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &mut o as *mut _ as _, std::mem::size_of_val(&o) as u32).is_ok() {
             resource_binding_tier = o.ResourceBindingTier.0;
+            resource_heap_tier = o.ResourceHeapTier.0;
             tiled_resources_tier = o.TiledResourcesTier.0;
         }
         let mut view_instancing_tier = 0i32;
@@ -720,13 +723,14 @@ fn main() {
             shader_model_asked: asked.clone(),
             highest_shader_model: highest.clone(),
             resource_binding_tier,
+            resource_heap_tier,
             tiled_resources_tier,
             view_instancing_tier,
         });
         println!("MeshShaderTier: {mesh_shader_tier}, SamplerFeedbackTier: {sampler_feedback_tier}");
         println!("WaveLaneCountMin/Max: {wave_min}/{wave_max}");
         println!("ShaderModel: asked {asked}, runtime reports {highest}");
-        println!("ResourceBindingTier: {resource_binding_tier}, TiledResourcesTier: {tiled_resources_tier}, ViewInstancingTier: {view_instancing_tier}");
+        println!("ResourceBindingTier: {resource_binding_tier}, ResourceHeapTier: {resource_heap_tier}, TiledResourcesTier: {tiled_resources_tier}, ViewInstancingTier: {view_instancing_tier}");
     }
 
     // G0: compile minimal compute shaders with DXC and try to build PSOs.
