@@ -41,5 +41,8 @@ resources.pri
 report.json
 frame_*.bmp
 
+# Agility SDK and other vendored binaries (fetched by tools/fetch_agility.ps1, never committed)
+/third_party/
+
 # Python bytecode of the scripts
 __pycache__/
