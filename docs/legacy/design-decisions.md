@@ -12,6 +12,14 @@ D3 and the D8 overflow behaviour each get two options with pros/cons and a
 recommendation but NO final pick — the owner chooses; IB is u32 by default, u16 is
 an optimisation to re-check against real peaks at 4.4. Nothing here changes code.
 
+**RESOLVED BY THE OWNER (2026-11-25):** **D3 = A** (vertices stay in `res`, the VS
+fetches; re-open trigger unchanged: measured fill < 15% AND VS traffic > 2× B's
+writes at 4.4 → revisit at 7.5) and **D8 overflow = (a)** (skip the whole draw +
+`LEGACY_OVERFLOW` counter + `xlog_warn`, never silent; **the overflow counter
+goes into `report.json` — carry it into step 8.2**). The recommendations below
+are therefore the final decisions; the alternatives stay on record for the
+re-open trigger.
+
 Notation: a draw carries `G` thread groups (records), a record is 128 vertices ×
 128 primitives, `s` output slots → `vd = 4(1+s)` vertex dwords, `rd = 4 + 128·vd +
 128` record dwords (all from audit 1.1).
@@ -52,7 +60,7 @@ inter-pass barrier, audit 1.2 B6) → **scan-1, scan-2, recon = 3 dispatches** (
 the scan/recon stages: one UAV barrier each on the buffer just written (scan writes
 prefix+args, recon writes IB) — same minimal rule as the reference.
 
-## D3 — vertex storage: A (no VB) vs B (VB copy) — OWNER'S CHOICE
+## D3 — vertex storage: A (no VB) vs B (VB copy) — RESOLVED BY THE OWNER: A
 
 The unknown that decides this is the **record fill ratio** `vertex_count / 128` —
 a runtime value the static pack cannot give (the program writes the header when it
@@ -98,7 +106,7 @@ plus a UAV→SRV transition of `res` before the draw.
 - *Risks:* at high fill B strictly loses — it writes ≥2.7× A's bytes at p50 with
   no read-side gain (A's reads are cache-hit-dominated).
 
-**Recommendation (not fixed): A.** The retail shape (uniform 128-vertex records,
+**Decision (resolved by the owner): A.** The retail shape (uniform 128-vertex records,
 32 B p50 stride) is cache-friendly for A, A adds no writes and no passes, and the
 golden chain stays minimal. **Re-open trigger (per the playbook, at 7.5 or earlier
 at 4.4):** measured mean fill < 15% AND measured VS read traffic > 2× B's write
@@ -148,7 +156,7 @@ real margin comes from 4.4).
 flight, reset at the frame origin (audit 1.7 point 9 — `frame.rs`); every region
 256-B aligned; the peak per frame is logged (D8's counters).
 
-**Overflow behaviour — two options, OWNER'S CHOICE:**
+**Overflow behaviour — RESOLVED BY THE OWNER: (a) skip the draw (counter + warning, never silent; the counter lands in `report.json` for step 8.2).**
 
 - **(a) Skip the whole draw** (+ `LEGACY_OVERFLOW` counter + one `xlog_warn`,
   never silent). Pros: honest semantics (no half-drawn geometry), the simplest
