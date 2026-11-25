@@ -22,7 +22,7 @@
 - Путь к дампу тайтла / `XCL_SAMPLE_RPF`: —
 
 ### TGT (GTX 1080)
-- GPU / VRAM: NVIDIA GeForce GTX 1080 / 4 GB (4293918720 bytes)
+- GPU / VRAM: NVIDIA GeForce GTX 1080 / 8 GB (8450473984 bytes)
 - Драйвер: 32.0.15.8278
 - ОС: Windows 10 Pro 10.0.19045
 - Rust: 1.100.0 (0ef1bc386 2026-11-09)
@@ -55,7 +55,7 @@
 
 | Шаг | Название | Статус | Машина | Дата | Коммит | Артефакты | Примечание |
 |---|---|---|---|---|---|---|---|
-| 0.1 | Проба: устройство TGT | todo | TGT | | | | |
+| 0.1 | Проба: устройство TGT | done | TGT | 2026-11-25 | | tools/legacy_probe/out_tgt.json | Адаптеры: GTX 1080 (8GB VRAM), Microsoft Basic Render Driver; D3D12 device created on adapter 0 (FL 12_0) |
 | 0.2 | Проба: фичи D3D12 | todo | TGT | | | | |
 | 0.3 | GATE G0: SM 6.6 PSO | todo | TGT | | | | |
 | 0.4 | Baseline на DEV | todo | DEV | | | | |
@@ -117,6 +117,7 @@
 
 - [2026-11-25 playbook] Журнал создан из PROGRESS_TEMPLATE.md (плейбук v2.0).
 - [2026-11-25 TGT] PROGRESS.md инициализирован: заполнено окружение TGT; шаг 0.5 (ветка + плейбук) отмечен done (коммит 101e8c5).
+- [2026-11-25 TGT] Шаг 0.1 выполнен: tools/legacy_probe создан, запущен; выделен GTX 1080 (8 GB VRAM, LUID 00000000:00007E43), D3D12 device created (FL 12_0); артефакт: tools/legacy_probe/out_tgt.json.
 
 ## Решения (append-only)
 
