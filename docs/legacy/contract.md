@@ -1,7 +1,7 @@
 # XCL Legacy GPU Backend — Contract (Gate Document for Stages 2–8)
 
 Consolidates audits 1.1–1.4, 1.7 and design-decisions 1.5 into a single specification.
-Every claim below carries a `file:symbol` or audit reference.
+Every claim below carries a `file:symbol` or audit reference. Claims not verified against source are marked **не проверено**.
 
 ---
 
@@ -25,13 +25,13 @@ Three independent facts (audit 1.7 §0):
 
 - Console NGG program → HLSL → DXC `cs_6_6` (`pso.rs:885`, `pso.rs:848`).
 - One record per thread group, written to root UAV `u1` (`res`) (`runner.rs:1266-1268`, `emit.rs:5223`).
-- `DispatchX(x,y,z)` dispatches `x × y × z` thread groups → same number of records. Console NGG dispatches use `y=z=1` (audit 1.7 #6: `list_x.rs:2767` funnels `DispatchX` into `bind.rs::dispatch` which calls `list.Dispatch(x,y,z)`). **If `y>1` or `z>1`**, total records = `x*y*z`; legacy chain must handle up to 1 048 576 records/draw (scan limit) and `groups` for D8 budget = `x*y*z` (cap at 65 535 for 16-bit index math where applicable).
+- `DispatchX(x,y,z)` dispatches `x × y × z` thread groups → same number of records. Console NGG dispatches use `y=z=1` (**не проверено** — `list_x.rs:2767` funnels `DispatchX` into `bind.rs::dispatch` which calls `list.Dispatch(x,y,z)`). **v1 supports only `y=z=1`**; if `y>1` or `z>1`, draw is skipped with warning + `LEGACY_UNSUPPORTED_DISPATCH` counter. Record index = linear group index (`gid.x + gid.y*groups_x + gid.z*groups_x*groups_y` — **не проверено**, compute shader uses `SV_GroupID` per `emit.rs:4826`).
 - **Record layout (dword-by-dword, confirmed by dump on GTX 1080 — audit 1.1 [DUMP]):**
 
   | Region | Dwords | Formula / Content |
   |---|---|---|
   | Header | 4 | `[vertex_count, primitive_count, spare, spare]` (audit 1.1 B2) |
-  | Vertices | `max_vertices × vert_dwords` | `vert_dwords = 4 × (1 + ranked(outputs, true).len())` — pos float4 + 1 float4 per ranked output (audit 1.1 B3, B6). Retail: 4–92 dwords (1–22 ranked outputs). |
+  | Vertices | `max_vertices × vert_dwords` | `vert_dwords = 4 × (1 + ranked(outputs, true).len())` — pos float4 + 1 float4 per ranked output (audit 1.1 B3, B6). Retail: 4–92 dwords (0–22 ranked outputs). |
   | Primitives | `max_primitives` | Packed 10-10-10-1: `v0=bits 0-9, v1=bits 10-19, v2=bits 20-29, bit31=null` (audit 1.1 B7, audit 1.3 V1–V2) |
 
 - `record_dwords = 4 + max_vertices × vert_dwords + max_primitives` (audit 1.1 B4). Retail: all 128/128/128, `vert_dwords` 8–92, `record_dwords` 644–11908 (audit 1.4).
@@ -42,7 +42,7 @@ Three independent facts (audit 1.7 §0):
 
 ## 2. What the legacy backend must produce (from `res` records)
 
-**Inputs:** `res` buffer (records concatenated per group), `groups = x*y*z` (from `DispatchX` arguments), `split` (from `TwoPassPso.mesh_groups_per_record`), `record` (`MsInterface`), `max_vertices`, `max_primitives`, `vert_dwords`, `record_dwords`.
+**Inputs:** `res` buffer (records concatenated per group), `groups = x*y*z` (from `DispatchX` arguments, v1: `y=z=1`), `split` (from `TwoPassPso.mesh_groups_per_record`), `record` (`MsInterface`), `max_vertices`, `max_primitives`, `vert_dwords`, `record_dwords`.
 
 **Outputs (per draw):**
 
@@ -55,7 +55,7 @@ Three independent facts (audit 1.7 §0):
    - Size: `3 × Σ primitive_count × 4` bytes (u32), where `Σ primitive_count = sum over records of min(record.primitive_count, max_primitives)`.
 
 2. **Scan buffers** — prefix sums + block sums + final args.
-   - Two-level scan (D2): scan-1 (1 group per 1024 records, 128 threads, groupshared, no wave intrinsics) → scan-2 (1 group scans block sums, ≤1024 blocks = **≤1 048 576 records/draw**).
+   - Two-level scan (D2): scan-1 (1 group per 1024 records, 128 threads, groupshared, no wave intrinsics) → scan-2 (1 group scans block sums, ≤1024 blocks). **Max records per draw = min(1 048 576, 65535×65535×65535)** — Dispatch dimension limit 65535 per axis is the practical bound.
    - Output: `prefix[r]` per record (4 B) + DRAW args (16 B, D6).
 
 3. **DRAW indirect args** (16 bytes, `D3D12_DRAW_ARGUMENTS`):
@@ -75,19 +75,19 @@ Three independent facts (audit 1.7 §0):
 
 **Source:** audit 1.2 (а), audit 1.3 (а), audit 1.3 (г), design D1/D3-A/D4/D7.
 
-- **Root signature (graphics):** same ABI 6 UAVs (`u0=io, u1=res, u2..u5=UMA`) **+** IB as root SRV (or descriptor table SRV) **+** DRAW args as root constant / indirect argument buffer.
-- **Vertex Shader (passthrough):** fetch from `res` by global vertex id.
+- **Root signature (graphics):** same ABI 6 UAVs (`u0=io, u1=res, u2..u5=UMA`) **+** IB as root UAV (VS reads via `Load`) **+** DRAW args as root constant / indirect argument buffer.
+- **Vertex Shader (passthrough):** fetch from `res` and IB by global vertex id.
   - `r = id / max_vertices`, `local = id % max_vertices` (for uniform `max_vertices=128`: `r = id >> 7`, `local = id & 127` — **only valid when max_vertices=128; general case uses div/mod**).
   - Record base = `r × record_dwords + 4` (skip header).
   - Vertex stride = `vert_dwords × 4` bytes.
   - Loads: `pos` (float4) + each ranked output (float4) → `XclIn` struct.
-  - **Resource state:** `res` stays **UAV** — VS reads via `RWByteAddressBuffer.Load*` (no UAV→SRV transition, no barrier pair). *Alternative (SRV) rejected to avoid extra barrier and state tracking; confirmed PS does not read `res` — PS only consumes `XclIn` from VS (emit.rs:5065–5109).*
+  - **Resource state:** `res` stays **UAV** — VS reads via `RWByteAddressBuffer.Load*` (no UAV→SRV transition, no barrier pair). IB stays **UAV** — VS reads via `RWByteAddressBuffer.Load*` (same). *Alternative (SRV) rejected to avoid extra barrier and state tracking; confirmed PS does not read `u1` — PS only consumes `XclIn` from VS (emit.rs:5065–5109) **не проверено**.*
 - **Pixel Shader:** the translated console PS (unchanged).
   - Inputs: `SV_Position` + `a{k}` from `ranked(ps.inputs, false)` with interpolation modifiers (`v_interp_mov_f32` → `nointerpolation`, non-float always flat) (audit 1.3 A2).
   - System: `SV_IsFrontFace` (SPI ENA bit 12), `SV_Coverage` (bit 14) (audit 1.3 A3).
-  - **PS does NOT read `u1` (`res`)** — verified in emit.rs (PS body only uses `xi` struct).
-- **Rasterizer state:** taken from the **title's graphics PSO** (the console pipeline's rasterizer desc, translated via `device_x.rs` patching — `real.rs:4329`, `4670`, `5660`, `5736`). **Not hardcoded to `CullMode_NONE`** (that was the test harness in `runner.rs:1312` for mesh reference). Legacy PSO uses the same rasterizer state as the classic path so backface/frustum culling behaves identically for the title.
-- **Render targets / blend / sample mask:** same as title's PSO (classic path `translated_graphics_pso`).
+  - **PS does NOT read `u1` (`res`)** — **не проверено** (PS body only uses `xi` struct per emit.rs:5065–5109).
+- **Rasterizer state:** taken from the **title's graphics PSO** (the console pipeline's rasterizer desc, copied from title's subobjects into the stream at `translated_mesh_stream_once` lines 5433-5448, type 9 = rasterizer; available in `finish_two_pass` via `stream` parameter **не проверено**). Legacy PSO uses the same rasterizer state as the classic path so backface/frustum culling behaves identically for the title. **Not hardcoded to `CullMode_NONE`** (that was the test harness in `runner.rs:1312` for mesh reference).
+- **Render targets / blend / sample mask / depth-stencil:** same as title's PSO (copied from title's subobjects: blend type 7, depth-stencil type 10, RT formats type 14/15, sample desc type 16).
 - **Provoking vertex = v0** (first index in 10-10-10 bit order) — **expected to match** D3D `nointerpolation` semantics (audit 1.3 V3, design D7); **golden check at 3.5: console P0 ≡ PC-flat bitwise**.
 - **Flat attributes** → `nointerpolation` (audit 1.3 D7 caveat, design D7).
 
@@ -116,21 +116,23 @@ Three independent facts (audit 1.7 §0):
 ```
 
 - **Dispatch count:** 3 (+2 with cull) per draw. Barriers: one UAV per written buffer (minimal, matches reference).
-- **`groups` known at record time** = `DispatchX` argument `x*y*z` (audit 1.7 #6).
-- **`split` known** = `TwoPassPso.mesh_groups_per_record` (registry). **Needed: reverse index compute PSO → TwoPassPso** (audit 1.7 #4).
+- **`groups` known at record time** = `DispatchX` argument `x*y*z` (v1: `y=z=1`) (audit 1.7 #6).
+- **`split` known** = `TwoPassPso.mesh_groups_per_record` (registry). **Needed: reverse index compute PSO → TwoPassPso** (audit 1.7 #6).
 - **Indirect args** written by scan-2 (or cull final scan) — 16 B `DRAW` signature (D6).
-- **ExecuteIndirect wrap:** `COMMON → INDIRECT_ARGUMENT → COMMON` on XCL-owned args buffer (NVIDIA fix #59, `bind.rs:318-340`, audit 1.7 #7).
+- **ExecuteIndirect wrap:** `COMMON → INDIRECT_ARGUMENT → COMMON` on XCL-owned args buffer (NVIDIA fix #59, `bind.rs:318-340`, audit 1.7 #7). **Only args/args2 buffers go through this transition.**
 - **CommandSignature:** XCL's own DRAW signature (creator! pass-through, `real.rs:3237`, audit 1.7 #8) — title signatures untouched (6.2 later).
 
 ### Resource state transitions (summary)
 
 | Buffer | After compute | Before scan-1 | After scan-1 | Before scan-2 | After scan-2 | Before recon | After recon | Before cull (opt) | After cull | Before ExecuteIndirect | Before VS draw |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `res` | UAV | UAV (barrier) | UAV | UAV | UAV | UAV | UAV | UAV | UAV | UAV | **UAV (VS reads via Load)** |
-| IB | — | — | — | — | — | COMMON | UAV | UAV | UAV | INDIRECT_ARGUMENT | — |
+| `res` | UAV | UAV (barrier) | UAV | UAV | UAV | UAV | UAV | UAV | UAV | UAV | **UAV (VS Load)** |
+| IB | — | — | — | — | — | COMMON | UAV | UAV | UAV | **UAV** | **UAV (VS Load)** |
 | args | — | — | — | COMMON | UAV | UAV | UAV | UAV | UAV | INDIRECT_ARGUMENT | — |
-| IB2 (cull) | — | — | — | — | — | — | — | COMMON | UAV | INDIRECT_ARGUMENT | — |
+| IB2 (cull) | — | — | — | — | — | — | — | COMMON | UAV | **UAV** | — |
 | args2 (cull) | — | — | — | — | — | — | — | COMMON | UAV | INDIRECT_ARGUMENT | — |
+
+**IB/IB2 stay UAV throughout** (VS reads via `Load`); only args/args2 transition to INDIRECT_ARGUMENT for ExecuteIndirect.
 
 ---
 
@@ -140,8 +142,8 @@ Three independent facts (audit 1.7 §0):
 
 - **Per-record worst-case (u32 IB):** ≈1545 B = IB 1536 + scan ~9 + args 16.
 - **u16 IB optimisation:** 768 B/record, legal when `groups < 512` (global id `< 65536`). Verify real peaks at 4.4.
-- **Per-frame ring allocator:** bump regions per draw, N=3 frames in flight, 256-B alignment, reset at frame origin (`frame.rs` frame clock, audit 1.7 #9).
-- **Budget:** `legacy_budget_mb` default 1024 (config) — **per frame** (sum of all draws' transient allocations in one frame). Ring holds 3 frames = up to ~3× budget = 3 GB worst-case. On 8 GB VRAM (GTX 1080): 3 GB legacy ring + ~1–2 GB game resources + ~1 GB OS/driver = **fits with margin**; overflow triggers at ≥660k records/frame (assumption, verify at 4.4).
+- **Per-frame ring allocator:** bump regions per draw, N=3 frames in flight, 256-B alignment, reset at frame origin (`frame.rs` frame clock, audit 1.7 #9). **Allocator allocates on demand up to `legacy_budget_mb` per frame; does NOT reserve the full budget upfront.**
+- **Budget:** `legacy_budget_mb` default 1024 (config) — **per frame** (sum of all draws' transient allocations in one frame). Ring holds 3 frames = up to ~3× budget = 3 GB worst-case. On 8 GB VRAM (GTX 1080): **assumption** — 3 GB legacy ring + ~1–2 GB game resources + ~1 GB OS/driver = fits with margin; overflow triggers at ≥660k records/frame (assumption, verify at 4.4).
 - **Overflow behaviour (owner choice = a):** skip entire draw + `LEGACY_OVERFLOW` counter + `xlog_warn!` (never silent). Counter → `report.json` (step 8.2). No partial draws, goldens unaffected.
 
 ---
@@ -187,7 +189,7 @@ Three independent facts (audit 1.7 §0):
 | 3 | GS two-pass | `real.rs::translated_gs_pso` (5455) | Inherits branch |
 | 4 | Draw binding | `bind.rs::graphics_bound` (495) | Bind legacy graphics PSO + IB/args for legacy draws |
 | 5 | Draw helpers | `bind.rs::draw_rects` (384) | Precedent: CPU-synthesized geometry → draw |
-| 6 | **Main: Dispatch** | `bind.rs::dispatch` (803), `list_x.rs::dispatch_x` (2766) | **Insert legacy chain here**: compute pass → UAV barrier → scan → recon → [cull] → ExecuteIndirect(DRAW). `groups=x*y*z`, `split=TwoPassPso.mesh_groups_per_record`. **Needs reverse index compute PSO → TwoPassPso.** |
+| 6 | **Main: Dispatch** | `bind.rs::dispatch` (803), `list_x.rs::dispatch_x` (2766) | **Insert legacy chain here**: compute pass → UAV barrier → scan → recon → [cull] → ExecuteIndirect(DRAW). `groups=x*y*z`, `split=TwoPassPso.mesh_groups_per_record`. **Needs reverse index compute PSO → TwoPassPso** (audit 1.7 #6). |
 | 7 | ExecuteIndirect | `bind.rs::execute_indirect` (253) | Copy COMMON→INDIRECT_ARGUMENT wrap for XCL's own args buffer |
 | 8 | CommandSignature | `real.rs::dev_create_command_signature` (3237) | Pass-through; legacy uses XCL's own DRAW signature |
 | 9 | Frame reset | `hle/d3d12x/frame.rs` | `StoreRing` reset at frame origin (WaitFrameEventX/PresentX) |
@@ -212,11 +214,13 @@ Three independent facts (audit 1.7 §0):
 
 ## 10. Open questions / Blockers (from audits)
 
-1. **Reverse index compute PSO → TwoPassPso** (audit 1.7 #4) — new structure for 4.2/4.4.
+1. **Reverse index compute PSO → TwoPassPso** (audit 1.7 #6) — new structure for 4.2/4.4.
 2. **Record fill ratio `vertex_count/128`** — runtime value, not in static pack. Decides D3 re-open. Measured at 4.4.
 3. **Per-draw `G` peaks** — decides u16 IB viability and overflow reachability. Measured at 4.4.
 4. **WARP device removal on retail shaders** — risk 1 in single-machine-plan. Mitigation: G1 primary on 1080 (no WARP), WARP secondary + survivor list.
 5. **Cross-device pixel tolerance** — PSNR/epsilon must be fixed **before first G2 run** (playbook 4.6). Owner decision pending.
+6. **Compute shader record indexing for 3D dispatch** — uses `SV_GroupID` (emit.rs:4826); linear index formula **не проверено**. v1: skip if `y>1 || z>1`.
+7. **Rasterizer state availability in `finish_two_pass`** — stream contains title's rasterizer (type 9) copied at `translated_mesh_stream_once` lines 5433-5448 **не проверено**.
 
 ---
 
