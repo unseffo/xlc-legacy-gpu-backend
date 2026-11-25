@@ -44,5 +44,8 @@ frame_*.bmp
 # Agility SDK and other vendored binaries (fetched by tools/fetch_agility.ps1, never committed)
 /third_party/
 
+# TGT run artifacts referenced from PROGRESS.md but kept out of the repository
+/artifacts_tgt/
+
 # Python bytecode of the scripts
 __pycache__/
