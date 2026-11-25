@@ -94,8 +94,14 @@ impl Lw {
         let mf = self.sel(nz, mf, z);
         (mf, ef)
     }
+    /// The ISA's mantissa keeps the input's sign (as `frexp_mant_d` does); DXC's `frexp` drops it.
     pub fn frexp_mant(&mut self, x: Value) -> Value {
         let (m, _) = self.frexp_dxc(x);
+        let mb = self.bits(m);
+        let xb = self.bits(x);
+        let sign = self.andc(xb, 0x8000_0000);
+        let mb = self.or(mb, sign);
+        let m = self.f(mb);
         let a = self.isinf(x);
         let b = self.isnan(x);
         let s = self.lor(a, b);
@@ -222,6 +228,7 @@ impl Lw {
     }
     /// `mad_nf`: separately rounded multiply and add (`precise`).
     pub fn mad_nf(&mut self, a: Value, b: Value, c: Value) -> Value {
+        self.s.require(super::shader::Feature::DisableMathRefactoring);
         let p = self.fmul(a, b);
         self.fadd(p, c)
     }
@@ -492,6 +499,72 @@ impl Lw {
         let s = self.lshrc(u, 31);
         self.fclass_parts(e, 0xFF, m, 0x40_0000, s)
     }
+    /// Constant-mask specialization of `v_cmp_class_f32`: tests raw IEEE-754 binary32 bit
+    /// intervals directly (using `abs(u)` for sign-symmetric masks and raw `u` otherwise).
+    pub fn fclass_const(&mut self, f: Value, mask: u32) -> Value {
+        let mask = mask & 0x3FF;
+        if mask == 0 {
+            return self.b(false);
+        }
+        if mask == 0x3FF {
+            return self.b(true);
+        }
+        let u = self.bits(f);
+        let sym = ((mask >> 5) & 1 == (mask >> 6) & 1)
+            && ((mask >> 4) & 1 == (mask >> 7) & 1)
+            && ((mask >> 3) & 1 == (mask >> 8) & 1)
+            && ((mask >> 2) & 1 == (mask >> 9) & 1);
+        let (x, dom_max, intervals, invert) = if sym {
+            let pos = merged_class_intervals(mask, &F32_ABS_CLASSES);
+            let neg = merged_class_intervals(!mask & 0x3FF, &F32_ABS_CLASSES);
+            let abs_u = self.andc(u, 0x7FFF_FFFF);
+            if neg.len() < pos.len() {
+                (abs_u, 0x7FFF_FFFFu32, neg, true)
+            } else {
+                (abs_u, 0x7FFF_FFFFu32, pos, false)
+            }
+        } else {
+            let pos = merged_class_intervals(mask, &F32_RAW_CLASSES);
+            let neg = merged_class_intervals(!mask & 0x3FF, &F32_RAW_CLASSES);
+            if neg.len() < pos.len() {
+                (u, u32::MAX, neg, true)
+            } else {
+                (u, u32::MAX, pos, false)
+            }
+        };
+        if intervals.len() == 1 && invert {
+            let (lo, hi) = intervals[0];
+            return if lo == hi {
+                self.cmpc(Pred::Ne, x, lo)
+            } else if lo == 0 {
+                self.cmpc(Pred::UGt, x, hi)
+            } else if hi == dom_max {
+                self.cmpc(Pred::ULt, x, lo)
+            } else {
+                let d = self.addc(x, lo.wrapping_neg());
+                self.cmpc(Pred::UGt, d, hi - lo)
+            };
+        }
+        let mut acc: Option<Value> = None;
+        for (lo, hi) in intervals {
+            let term = if lo == hi {
+                self.cmpc(Pred::Eq, x, lo)
+            } else if lo == 0 {
+                self.cmpc(Pred::ULe, x, hi)
+            } else if hi == dom_max {
+                self.cmpc(Pred::UGe, x, lo)
+            } else {
+                let d = self.addc(x, lo.wrapping_neg());
+                self.cmpc(Pred::ULe, d, hi - lo)
+            };
+            acc = Some(match acc {
+                Some(prev) => self.lor(prev, term),
+                None => term,
+            });
+        }
+        let r = acc.unwrap();
+        if invert { self.lnot(r) } else { r }
+    }
     /// class bit index from the exponent field, its all-ones value, mantissa != 0,
     /// the quiet bit and the sign
     pub fn fclass_bits(&mut self, e: Value, emax: u32, mnz: Value, qn: Value, n: Value) -> Value {
@@ -532,5 +605,326 @@ impl Lw {
         let eq = self.cmpc(Pred::Eq, h, 0x7FF0_0000);
         let lz = self.cmpc(Pred::Eq, l, 0);
         self.land(eq, lz)
+    }
+}
+
+/// Contiguous `abs(u)` intervals covering IEEE-754 binary32 (`0..=0x7FFF_FFFF`).
+const F32_ABS_CLASSES: [(u32, u32, u32); 6] = [
+    (1 << 6, 0x0000_0000, 0x0000_0000), // ±0
+    (1 << 7, 0x0000_0001, 0x007F_FFFF), // ±Denorm
+    (1 << 8, 0x0080_0000, 0x7F7F_FFFF), // ±Normal
+    (1 << 9, 0x7F80_0000, 0x7F80_0000), // ±Inf
+    (1 << 0, 0x7F80_0001, 0x7FBF_FFFF), // sNaN
+    (1 << 1, 0x7FC0_0000, 0x7FFF_FFFF), // qNaN
+];
+
+/// Contiguous raw `u32` intervals covering IEEE-754 binary32 (`0..=0xFFFF_FFFF`).
+const F32_RAW_CLASSES: [(u32, u32, u32); 12] = [
+    (1 << 6, 0x0000_0000, 0x0000_0000), // +0
+    (1 << 7, 0x0000_0001, 0x007F_FFFF), // +Denorm
+    (1 << 8, 0x0080_0000, 0x7F7F_FFFF), // +Normal
+    (1 << 9, 0x7F80_0000, 0x7F80_0000), // +Inf
+    (1 << 0, 0x7F80_0001, 0x7FBF_FFFF), // +sNaN
+    (1 << 1, 0x7FC0_0000, 0x7FFF_FFFF), // +qNaN
+    (1 << 5, 0x8000_0000, 0x8000_0000), // -0
+    (1 << 4, 0x8000_0001, 0x807F_FFFF), // -Denorm
+    (1 << 3, 0x8080_0000, 0xFF7F_FFFF), // -Normal
+    (1 << 2, 0xFF80_0000, 0xFF80_0000), // -Inf
+    (1 << 0, 0xFF80_0001, 0xFFBF_FFFF), // -sNaN
+    (1 << 1, 0xFFC0_0000, 0xFFFF_FFFF), // -qNaN
+];
+
+fn merged_class_intervals(mask: u32, table: &[(u32, u32, u32)]) -> Vec<(u32, u32)> {
+    let mut out: Vec<(u32, u32)> = Vec::new();
+    for &(bit, lo, hi) in table {
+        if mask & bit == 0 {
+            continue;
+        }
+        if let Some(last) = out.last_mut() {
+            if last.1.checked_add(1) == Some(lo) {
+                last.1 = hi;
+                continue;
+            }
+        }
+        out.push((lo, hi));
+    }
+    out
+}
+
+#[cfg(test)]
+mod disable_math_refactoring_tests {
+    use super::super::kernel::{self, KernelOptions};
+    use super::super::validate;
+    use crate::gpu::rdna2;
+    use crate::gpu::recomp::PsInterface;
+
+    fn opts() -> KernelOptions {
+        KernelOptions { wave64: false, split: false, mem_windows: 1, sampler_base: 0 }
+    }
+
+    /// Parses the entry-point shader flags (`!dx.entryPoints` property tag `0`)
+    /// from DXIL disassembly. Returns `0` if tag `0` is absent.
+    fn entry_point_flags(dis: &str) -> u64 {
+        let props_id = dis
+            .lines()
+            .find_map(|line| {
+                if !line.contains("!\"main\"") {
+                    return None;
+                }
+                let start = line.rfind('!')?;
+                let rest = &line[start..];
+                let end = rest.find(|c: char| !c.is_ascii_digit() && c != '!').unwrap_or(rest.len());
+                Some(&rest[..end])
+            })
+            .expect("entry point metadata node");
+        let props_line = dis
+            .lines()
+            .find(|line| line.trim_start().starts_with(&format!("{props_id} =")))
+            .expect("entry point properties node");
+        let marker = "i32 0, i64 ";
+        let Some(idx) = props_line.find(marker) else {
+            return 0;
+        };
+        let rest = &props_line[idx + marker.len()..];
+        let end = rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len());
+        rest[..end].parse::<u64>().expect("valid u64 flags")
+    }
+
+    fn v_mad_f32(vdst: u64, s0: u64, s1: u64, s2: u64) -> Vec<u8> {
+        rdna2::encode("V_MAD_F32", "ENC_VOP3", &[("VDST", vdst), ("SRC0", 256 + s0), ("SRC1", 256 + s1), ("SRC2", 256 + s2)], None).unwrap()
+    }
+
+    fn v_mac_f32(vdst: u64, s0: u64, s1: u64) -> Vec<u8> {
+        rdna2::encode("V_MAC_F32", "ENC_VOP2", &[("VDST", vdst), ("SRC0", 256 + s0), ("VSRC1", s1)], None).unwrap()
+    }
+
+    fn v_fma_f32(vdst: u64, s0: u64, s1: u64, s2: u64) -> Vec<u8> {
+        rdna2::encode("V_FMA_F32", "ENC_VOP3", &[("VDST", vdst), ("SRC0", 256 + s0), ("SRC1", 256 + s1), ("SRC2", 256 + s2)], None).unwrap()
+    }
+
+    fn v_add_f32(vdst: u64, s0: u64, s1: u64) -> Vec<u8> {
+        rdna2::encode("V_ADD_F32", "ENC_VOP2", &[("VDST", vdst), ("SRC0", 256 + s0), ("VSRC1", s1)], None).unwrap()
+    }
+
+    fn s_endpgm() -> Vec<u8> {
+        rdna2::encode("S_ENDPGM", "ENC_SOPP", &[], None).unwrap()
+    }
+
+    #[test]
+    fn compute_unfused_mad_sets_disable_math_refactoring() {
+        for inst in [v_mad_f32(3, 0, 1, 2), v_mac_f32(2, 0, 1)] {
+            let mut code = inst;
+            code.extend(s_endpgm());
+            let dxil = kernel::translate(&code, opts()).expect("translate compute unfused mad");
+            validate::validate(&dxil).expect("dxil validate compute unfused mad");
+            let dis = validate::disassemble(&dxil).expect("disassemble compute unfused mad");
+            let flags = entry_point_flags(&dis);
+            assert_ne!(flags & (1 << 1), 0, "expected DisableMathRefactoring (bit 1) in flags={flags:#x}:\n{dis}");
+        }
+    }
+
+    fn ps_with_pos() -> PsInterface {
+        use crate::gpu::dxbc::SigElement;
+        // SPI_PS_INPUT_ENA bits 8..11: SV_Position.xyzw in v0..v3; SV_Target0 so EXP TGT=0 stays live.
+        PsInterface {
+            inputs: vec![SigElement { name: "SV_Position".into(), index: 0, system_value: 1, component_type: 3, register: 0, mask: 0xF, rw_mask: 0xF, stream: 0 }],
+            outputs: vec![SigElement { name: "SV_Target".into(), index: 0, system_value: 64, component_type: 3, register: 0, mask: 0xF, rw_mask: 0xF, stream: 0 }],
+            input_ena: 0x0F00,
+            attrs: None,
+        }
+    }
+
+    #[test]
+    fn pixel_unfused_mad_sets_disable_math_refactoring() {
+        let mut code = v_mad_f32(3, 0, 1, 2);
+        code.extend(rdna2::encode("EXP", "ENC_EXP", &[("TGT", 0), ("EN", 0xF), ("VSRC0", 3), ("VSRC1", 3), ("VSRC2", 3), ("VSRC3", 3), ("DONE", 1), ("VM", 1)], None).unwrap());
+        code.extend(s_endpgm());
+        let ps = ps_with_pos();
+        let k = kernel::translate_pixel(&code, opts(), &ps).expect("translate pixel unfused mad");
+        validate::validate(&k.dxil).expect("dxil validate pixel unfused mad");
+        let dis = validate::disassemble(&k.dxil).expect("disassemble pixel unfused mad");
+        assert!(dis.contains("fmul float") && dis.contains("fadd float"), "expected live fmul+fadd:\n{dis}");
+        let flags = entry_point_flags(&dis);
+        assert_ne!(flags & (1 << 1), 0, "expected DisableMathRefactoring (bit 1) in pixel flags={flags:#x}:\n{dis}");
+    }
+
+    #[test]
+    fn fmad_suppresses_disable_math_refactoring_in_compute_and_pixel() {
+        let mut cs_code = v_mad_f32(3, 0, 1, 2);
+        cs_code.extend(v_fma_f32(4, 0, 1, 3));
+        cs_code.extend(s_endpgm());
+        let dxil = kernel::translate(&cs_code, opts()).expect("translate compute mad+fma");
+        validate::validate(&dxil).expect("dxil validate compute mad+fma");
+        let dis = validate::disassemble(&dxil).expect("disassemble compute mad+fma");
+        assert!(dis.contains("dx.op.tertiary.f32(i32 46,"), "expected live FMad in compute shader:\n{dis}");
+        let flags = entry_point_flags(&dis);
+        assert_eq!(flags & (1 << 1), 0, "DisableMathRefactoring must be omitted when FMad is used (flags={flags:#x}):\n{dis}");
+
+        let mut ps_code = v_mad_f32(3, 0, 1, 2);
+        ps_code.extend(v_fma_f32(4, 0, 1, 3));
+        ps_code.extend(rdna2::encode("EXP", "ENC_EXP", &[("TGT", 0), ("EN", 0xF), ("VSRC0", 4), ("VSRC1", 4), ("VSRC2", 4), ("VSRC3", 4), ("DONE", 1), ("VM", 1)], None).unwrap());
+        ps_code.extend(s_endpgm());
+        let ps = ps_with_pos();
+        let k = kernel::translate_pixel(&ps_code, opts(), &ps).expect("translate pixel mad+fma");
+        validate::validate(&k.dxil).expect("dxil validate pixel mad+fma");
+        let dis = validate::disassemble(&k.dxil).expect("disassemble pixel mad+fma");
+        assert!(dis.contains("dx.op.tertiary.f32(i32 46,"), "expected live FMad in pixel shader:\n{dis}");
+        let flags = entry_point_flags(&dis);
+        assert_eq!(flags & (1 << 1), 0, "DisableMathRefactoring must be omitted in pixel shader when FMad is used (flags={flags:#x}):\n{dis}");
+    }
+
+    #[test]
+    fn plain_float_add_does_not_set_disable_math_refactoring() {
+        let mut code = v_add_f32(2, 0, 1);
+        code.extend(s_endpgm());
+        let dxil = kernel::translate(&code, opts()).expect("translate compute v_add_f32");
+        validate::validate(&dxil).expect("dxil validate compute v_add_f32");
+        let dis = validate::disassemble(&dxil).expect("disassemble compute v_add_f32");
+        let flags = entry_point_flags(&dis);
+        assert_eq!(flags & (1 << 1), 0, "plain v_add_f32 must not set DisableMathRefactoring (flags={flags:#x}):\n{dis}");
+    }
+
+    #[test]
+    fn dead_fmad_eliminated_by_dce_still_allows_disable_math_refactoring() {
+        // v5 is written by v_fma_f32 and never read, so DCE eliminates the FMad
+        // while v4's v_mad_f32 stays live through the pixel export.
+        let mut code = v_fma_f32(5, 0, 1, 2);
+        code.extend(v_mad_f32(4, 0, 1, 2));
+        code.extend(rdna2::encode("EXP", "ENC_EXP", &[("TGT", 0), ("EN", 0xF), ("VSRC0", 4), ("VSRC1", 4), ("VSRC2", 4), ("VSRC3", 4), ("DONE", 1), ("VM", 1)], None).unwrap());
+        code.extend(s_endpgm());
+        let ps = ps_with_pos();
+        let k = kernel::translate_pixel(&code, opts(), &ps).expect("translate pixel dead-fma+mad");
+        validate::validate(&k.dxil).expect("dxil validate pixel dead-fma+mad");
+        let dis = validate::disassemble(&k.dxil).expect("disassemble pixel dead-fma+mad");
+        assert!(!dis.contains("dx.op.tertiary.f32(i32 46,"), "expected dead FMad to be eliminated by DCE:\n{dis}");
+        let flags = entry_point_flags(&dis);
+        assert_ne!(flags & (1 << 1), 0, "post-DCE dead FMad should not suppress DisableMathRefactoring (flags={flags:#x}):\n{dis}");
+    }
+}
+
+#[cfg(test)]
+mod fclass_const_tests {
+    use super::super::kernel::{translate, KernelOptions};
+    use super::super::validate;
+    use super::{merged_class_intervals, F32_ABS_CLASSES, F32_RAW_CLASSES};
+    use crate::gpu::rdna2::encode;
+    use crate::gpu::recomp::runner::{self, KernelState};
+
+    fn ref_fclass(u: u32) -> u32 {
+        let e = (u >> 23) & 0xFF;
+        let m = u & 0x7F_FFFF;
+        let neg = (u >> 31) != 0;
+        match (e, m != 0) {
+            (0xFF, true) => if (m & 0x40_0000) != 0 { 1 } else { 0 },
+            (0xFF, false) => if neg { 2 } else { 9 },
+            (0, false) => if neg { 5 } else { 6 },
+            (0, true) => if neg { 4 } else { 7 },
+            _ => if neg { 3 } else { 8 },
+        }
+    }
+
+    #[test]
+    fn fclass_const_intervals_match_all_1024_masks_and_boundaries() {
+        let boundary_bits: [u32; 20] = [
+            0x0000_0000, 0x0000_0001, 0x007F_FFFF, 0x0080_0000, 0x3F80_0000, 0x7F7F_FFFF,
+            0x7F80_0000, 0x7F80_0001, 0x7FBF_FFFF, 0x7FC0_0000, 0x7FFF_FFFF,
+            0x8000_0000, 0x8000_0001, 0x807F_FFFF, 0x8080_0000, 0xFF7F_FFFF,
+            0xFF80_0000, 0xFF80_0001, 0xFFBF_FFFF, 0xFFFF_FFFF,
+        ];
+        for mask in 0..1024u32 {
+            let sym = ((mask >> 5) & 1 == (mask >> 6) & 1)
+                && ((mask >> 4) & 1 == (mask >> 7) & 1)
+                && ((mask >> 3) & 1 == (mask >> 8) & 1)
+                && ((mask >> 2) & 1 == (mask >> 9) & 1);
+            for &u in &boundary_bits {
+                let want = ((mask >> ref_fclass(u)) & 1) != 0;
+                let got = if mask == 0 {
+                    false
+                } else if mask == 0x3FF {
+                    true
+                } else if sym {
+                    let pos = merged_class_intervals(mask, &F32_ABS_CLASSES);
+                    let neg = merged_class_intervals(!mask & 0x3FF, &F32_ABS_CLASSES);
+                    let x = u & 0x7FFF_FFFF;
+                    if neg.len() < pos.len() {
+                        !neg.iter().any(|&(lo, hi)| x >= lo && x <= hi)
+                    } else {
+                        pos.iter().any(|&(lo, hi)| x >= lo && x <= hi)
+                    }
+                } else {
+                    let pos = merged_class_intervals(mask, &F32_RAW_CLASSES);
+                    let neg = merged_class_intervals(!mask & 0x3FF, &F32_RAW_CLASSES);
+                    if neg.len() < pos.len() {
+                        !neg.iter().any(|&(lo, hi)| u >= lo && u <= hi)
+                    } else {
+                        pos.iter().any(|&(lo, hi)| u >= lo && u <= hi)
+                    }
+                };
+                assert_eq!(got, want, "mask={mask:#05x} u={u:#010x}");
+            }
+        }
+    }
+
+    #[test]
+    fn gpu_direct_v_cmp_class_f32_const_mask_validates_and_matches_isa() {
+        let ko = KernelOptions { wave64: false, split: false, mem_windows: 1, sampler_base: 0 };
+        const MASKS: [u32; 12] = [
+            0x000, // false
+            0x3FF, // true
+            0x003, // NaN
+            0x204, // Inf
+            0x207, // NaN | Inf
+            0x1F8, // Finite
+            0x060, // Zero
+            0x090, // Denorm
+            0x108, // Normal
+            0x200, // +Inf only
+            0x004, // -Inf only
+            0x1FB, // everything except ±Inf (complement 1-interval)
+        ];
+        let mut code = Vec::new();
+        for (i, &mask) in MASKS.iter().enumerate() {
+            let sdst = 10 + 2 * i as u64;
+            code.extend(encode("V_CMP_CLASS_F32", "ENC_VOP3", &[("VDST", sdst), ("SRC0", 256), ("SRC1", 255)], Some(mask)).unwrap());
+        }
+        code.extend(encode("S_ENDPGM", "ENC_SOPP", &[], None).unwrap());
+        let dxil = translate(&code, ko).expect("translate v_cmp_class_f32");
+        validate::validate(&dxil).expect("validate v_cmp_class_f32");
+        let dis = validate::disassemble(&dxil).expect("disassemble v_cmp_class_f32");
+        // Constant masks must bypass the 10-class `fclass_bits` select tree completely.
+        assert!(!dis.contains(" = select i1 "), "expected zero selects for constant-mask v_cmp_class_f32:\n{dis}");
+
+        if runner::wave32_supported() != Ok(true) {
+            runner::skip_test("no wave32");
+            return;
+        }
+        let inputs: [u32; 12] = [
+            0x0000_0000, // +0
+            0x8000_0000, // -0
+            0x0000_0001, // +denorm
+            0x8040_0000, // -denorm
+            0x3F80_0000, // +1.0
+            0xBF80_0000, // -1.0
+            0x7F80_0000, // +Inf
+            0xFF80_0000, // -Inf
+            0x7F80_0001, // +sNaN
+            0xFF80_0001, // -sNaN
+            0x7FC0_0000, // +qNaN
+            0xFFFF_FFFF, // -qNaN
+        ];
+        let mut st = KernelState::default();
+        st.sgpr[127] = 0;
+        for (lane, &bits) in inputs.iter().enumerate() {
+            st.vgpr[lane][0] = bits;
+        }
+        let r = runner::run(&dxil, &st, &[]).expect("GPU run v_cmp_class_f32");
+        for (i, &mask) in MASKS.iter().enumerate() {
+            let got_mask = r.sgpr[10 + 2 * i];
+            for (lane, &bits) in inputs.iter().enumerate() {
+                let want = ((mask >> ref_fclass(bits)) & 1) != 0;
+                let got = ((got_mask >> lane) & 1) != 0;
+                assert_eq!(got, want, "mask={mask:#05x} lane={lane} bits={bits:#010x}: got {got}, want {want}");
+            }
+        }
     }
 }

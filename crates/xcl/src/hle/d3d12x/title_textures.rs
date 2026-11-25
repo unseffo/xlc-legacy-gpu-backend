@@ -322,10 +322,18 @@ pub fn counts() -> (usize, u64) {
     (TEXTURES.lock().unwrap().by_res.len(), UPLOADS.load(Ordering::Relaxed))
 }
 
+/// Whether a non-depth render target / UAV texture is small enough to be a CPU-filled glyph or UI
+/// atlas (`<= 1M` pixels, up to `2048` on either axis, e.g. a retail title's `2048x128` R8 glyph cache).
+fn is_small_cpu_filled_target(w: u64, h: u32, samples: u32, flags: u32) -> bool {
+    let pixels = w.saturating_mul(h as u64);
+    w <= 2048 && h <= 2048 && (64 * 64..=1024 * 1024).contains(&pixels) && samples <= 1 && flags & 0x2 == 0
+}
+
 /// A texture the title placed at `va` (its console desc `desc`): kept in step with the memory.
 pub(super) unsafe fn register(device: *mut c_void, res: *mut c_void, va: usize, desc: &[u8; 0x38], state: D3D12_RESOURCE_STATES) -> Result<(), String> {
     // (a new texture object, or the address of an old one again: its first upload is not left out)
     LAST_CONTENT.lock().unwrap().remove(&(res as usize));
+    STREAM_RECHECK.lock().unwrap().remove(&(res as usize));
     let tex = xg::Texture::new(desc).map_err(|hr| format!("layout {hr:#x}"))?;
     // the console's 32-bit 116 / 117 floats are half floats on the PC (`pc_resource_desc`): the
     // title's bytes are not the resource's texels
@@ -344,8 +352,7 @@ pub(super) unsafe fn register(device: *mut c_void, res: *mut c_void, va: usize, 
         let (samples, flags) = (u32::from_le_bytes(desc[0x24..0x28].try_into().unwrap()), u32::from_le_bytes(desc[0x30..0x34].try_into().unwrap()));
         static OFF: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
         let off = *OFF.get_or_init(|| std::env::var("XCL_SYNC_SMALL_TARGETS").is_ok_and(|v| v.trim() == "0"));
-        // (64x64 and up: 1x1 placeholders are not worth an entry; 0x2: a depth buffer)
-        !off && w <= 1024 && h <= 1024 && w * h as u64 >= 64 * 64 && samples <= 1 && flags & 0x2 == 0
+        !off && is_small_cpu_filled_target(w, h, samples, flags)
     };
     if tex.texels().is_none() || (tex.planes.len() != 1 && !small_target) {
         return Err("a render target / depth buffer".into());
@@ -457,12 +464,28 @@ fn recheck_source(e: &mut Entry) -> bool {
 /// by the GPU). The first upload, if still pending, stays: it runs before the title's submit
 /// that copies.
 pub fn note_gpu_write(res: usize) {
-    let mut t = TEXTURES.lock().unwrap();
-    if let Some(e) = t.get_mut(res) {
-        if !e.gpu_written {
-            e.gpu_written = true;
-            GPU_WRITTEN.fetch_add(1, Ordering::Relaxed);
+    if super::vram::level_pages() {
+        // (a texture whose levels get their pages one by one: all of them before the GPU's write)
+        let p = res as *mut c_void;
+        unsafe {
+            if let Some(r) = ID3D12Resource::from_raw_borrowed(&p) {
+                super::vram::map_levels(r, None);
+            }
         }
+    }
+    let mut marked = false;
+    {
+        let mut t = TEXTURES.lock().unwrap();
+        if let Some(e) = t.get_mut(res) {
+            if !e.gpu_written {
+                e.gpu_written = true;
+                GPU_WRITTEN.fetch_add(1, Ordering::Relaxed);
+                marked = true;
+            }
+        }
+    }
+    if marked {
+        STREAM_RECHECK.lock().unwrap().remove(&res);
     }
 }
 
@@ -480,9 +503,26 @@ pub(super) unsafe fn retire_overlapping(va: usize, len: usize) {
     if !any() || len == 0 {
         return;
     }
+    let src = mirror_source(va);
+    let gpu_aliases: Vec<usize> = crate::hle::kernelx::mirrors::gpu_views_of(va)
+        .into_iter()
+        .filter(|&g| g != va && mirror_source(g) == va)
+        .collect();
     let (retired, to_unmap) = {
         let mut t = TEXTURES.lock().unwrap();
-        let (delta, retired, unmap_ptrs) = t.retire_range(va, va.saturating_add(len));
+        let (mut delta, mut retired, mut unmap_ptrs) = t.retire_range(va, va.saturating_add(len));
+        if src != va {
+            let (d2, r2, u2) = t.retire_range(src, src.saturating_add(len));
+            delta += d2;
+            retired += r2;
+            unmap_ptrs.extend(u2);
+        }
+        for g in gpu_aliases {
+            let (d3, r3, u3) = t.retire_range(g, g.saturating_add(len));
+            delta += d3;
+            retired += r3;
+            unmap_ptrs.extend(u3);
+        }
         adjust_pending(delta);
         TEXTURES_LEN.store(t.by_res.len(), Ordering::Relaxed);
         (retired, clone_resources(&unmap_ptrs))
@@ -498,6 +538,7 @@ pub(super) unsafe fn retire_overlapping(va: usize, len: usize) {
 /// The PC texture was released for good.
 pub fn forget(res: usize) {
     LAST_CONTENT.lock().unwrap().remove(&res);
+    STREAM_RECHECK.lock().unwrap().remove(&res);
     let (removed, to_remap) = {
         let mut t = TEXTURES.lock().unwrap();
         let (removed, delta, remap_ptrs) = t.remove(res);
@@ -508,6 +549,10 @@ pub fn forget(res: usize) {
     for r in &to_remap {
         unsafe {
             super::vram::remap_if_unmapped(r);
+            // (lazy levels: one the GPU wrote is not uploaded again, so all of it has pages)
+            if super::vram::level_pages() && TEXTURES.lock().unwrap().by_res.get(&(r.as_raw() as usize)).is_some_and(|e| e.gpu_written) {
+                super::vram::map_levels(r, None);
+            }
         }
     }
     if removed {
@@ -746,6 +791,11 @@ unsafe fn refresh_once(queue: *mut c_void) {
             super::vram::before_execute(q);
         });
     }
+    let recheck_frame = {
+        let (p, b) = super::present::counters();
+        p.max(b)
+    };
+    recheck_streamed_unwatched(&ranges, recheck_frame);
     if dirty_len == 0 && PENDING.load(Ordering::Relaxed) == 0 {
         return;
     }
@@ -776,6 +826,7 @@ unsafe fn refresh_once(queue: *mut c_void) {
             })
             .collect()
     });
+    seed_stream_recheck(&todo, &ranges, recheck_frame);
     upload_all(todo);
 }
 
@@ -812,6 +863,211 @@ fn content_hash(b: &[u8]) -> u64 {
         tail = (tail ^ ((x as u64) << (8 * (k % 8)))).wrapping_mul(K).rotate_left(23);
     }
     h.iter().fold(tail, |a, &l| (a ^ l).wrapping_mul(K).rotate_left(27))
+}
+
+/// Frame milestones (relative to last upload or detected content change) at which unwatched
+/// textures (e.g. physical-page / `MEM_MAPPED` views that `GetWriteWatch` cannot track) are
+/// re-fingerprinted to catch late streaming writes that land after an initial zeroed upload.
+const STREAM_RECHECK_MILESTONES: [u64; 5] = [4, 12, 40, 120, 400];
+/// Per-slice sample size (start, mid, end -> at most 48 KiB hashed per due texture).
+const STREAM_SAMPLE_SLICE: usize = 16 * 1024;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct StreamRecheck {
+    base_frame: u64,
+    stage: u8,
+    last_fp: u64,
+}
+
+static STREAM_RECHECK: Mutex<BTreeMap<usize, StreamRecheck>> = Mutex::new(BTreeMap::new());
+static LAST_RECHECK_FRAME: AtomicU64 = AtomicU64::new(u64::MAX);
+static STREAM_RECHECK_HITS: AtomicU64 = AtomicU64::new(0);
+
+/// `XCL_TEXTURE_STREAM_RECHECK=0` disables spaced-milestone fingerprinting for unwatched textures.
+fn stream_recheck_enabled() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var("XCL_TEXTURE_STREAM_RECHECK").map_or(true, |v| v.trim() != "0"))
+}
+
+/// Whether every 4 KiB page of `[src, src + len)` is covered by the sorted, disjoint
+/// write-watched spans `watched` (`(base, size)` pairs from `cached_watch_ranges`).
+fn range_is_fully_watched(src: usize, len: usize, watched: &[(usize, usize)]) -> bool {
+    if len == 0 {
+        return true;
+    }
+    let mut lo = src & !0xFFF;
+    let hi = src.saturating_add(len).saturating_add(0xFFF) & !0xFFF;
+    if lo >= hi {
+        return true;
+    }
+    let mut i = watched.partition_point(|&(b, s)| b.saturating_add(s) <= lo);
+    while lo < hi {
+        let Some(&(b, s)) = watched.get(i) else {
+            return false;
+        };
+        if b > lo || s == 0 {
+            return false;
+        }
+        lo = b.saturating_add(s);
+        i += 1;
+    }
+    true
+}
+
+/// Bounded (<= 48 KiB) start/mid/end fingerprint of a texture's backing memory, read via
+/// `read_committed` so uncommitted or concurrently decommitted pages read as zero without faulting.
+unsafe fn sample_fingerprint(src: usize, size: usize) -> u64 {
+    if size == 0 {
+        return 0;
+    }
+    if size <= 3 * STREAM_SAMPLE_SLICE {
+        let buf = read_committed(src, size);
+        return content_hash(&buf);
+    }
+    let mid = src.saturating_add((size - STREAM_SAMPLE_SLICE) / 2);
+    let end = src.saturating_add(size - STREAM_SAMPLE_SLICE);
+    let h0 = content_hash(&read_committed(src, STREAM_SAMPLE_SLICE));
+    let h1 = content_hash(&read_committed(mid, STREAM_SAMPLE_SLICE));
+    let h2 = content_hash(&read_committed(end, STREAM_SAMPLE_SLICE));
+    let mut mix = [0u8; 32];
+    mix[0..8].copy_from_slice(&h0.to_le_bytes());
+    mix[8..16].copy_from_slice(&h1.to_le_bytes());
+    mix[16..24].copy_from_slice(&h2.to_le_bytes());
+    mix[24..32].copy_from_slice(&(size as u64).to_le_bytes());
+    content_hash(&mix)
+}
+
+/// Record baseline fingerprints for unwatched textures queued into `todo` so late streaming writes
+/// into mapped physical pages are caught at subsequent frame milestones.
+unsafe fn seed_stream_recheck(todo: &[(ID3D12Resource, Upload)], watched: &[(usize, usize)], frame: u64) {
+    if !stream_recheck_enabled() || todo.is_empty() {
+        return;
+    }
+    let mut seeded = Vec::new();
+    for (r, (_, src, tex, _)) in todo {
+        let size = tex.size() as usize;
+        if size == 0 || range_is_fully_watched(*src, size, watched) {
+            continue;
+        }
+        let fp = sample_fingerprint(*src, size);
+        seeded.push((r.as_raw() as usize, StreamRecheck { base_frame: frame, stage: 0, last_fp: fp }));
+    }
+    if !seeded.is_empty() {
+        let mut g = STREAM_RECHECK.lock().unwrap();
+        for (res, state) in seeded {
+            g.insert(res, state);
+        }
+    }
+}
+
+/// At most once per presented frame, re-fingerprint due unwatched textures at spaced milestones.
+unsafe fn recheck_streamed_unwatched(watched: &[(usize, usize)], frame: u64) {
+    if !stream_recheck_enabled() {
+        return;
+    }
+    if LAST_RECHECK_FRAME.swap(frame, Ordering::AcqRel) == frame {
+        return;
+    }
+    recheck_streamed_unwatched_at(watched, frame);
+}
+
+/// Re-fingerprint due unwatched textures at `frame`, re-queuing changed entries and resetting
+/// their milestone schedule so subsequent higher-resolution mip streams are also caught.
+unsafe fn recheck_streamed_unwatched_at(watched: &[(usize, usize)], frame: u64) {
+    let due: Vec<(usize, u64)> = {
+        let g = STREAM_RECHECK.lock().unwrap();
+        if g.is_empty() {
+            return;
+        }
+        g.iter()
+            .filter_map(|(&res, st)| {
+                let target = *STREAM_RECHECK_MILESTONES.get(st.stage as usize)?;
+                (frame.saturating_sub(st.base_frame) >= target).then_some((res, st.last_fp))
+            })
+            .collect()
+    };
+    if due.is_empty() {
+        return;
+    }
+
+    let mut check = Vec::with_capacity(due.len());
+    let mut prune = Vec::new();
+    {
+        let t = TEXTURES.lock().unwrap();
+        for (res, prev_fp) in due {
+            match t.by_res.get(&res) {
+                Some(e) if e.gpu_written => prune.push(res),
+                Some(e) if e.pending => {}
+                Some(e) => {
+                    let size = e.tex.size() as usize;
+                    if range_is_fully_watched(e.src, size, watched) {
+                        prune.push(res);
+                    } else {
+                        check.push((res, e.src, size, prev_fp));
+                    }
+                }
+                None => {
+                    if !t.shadowed.contains_key(&res) {
+                        prune.push(res);
+                    }
+                }
+            }
+        }
+    }
+    if !prune.is_empty() {
+        let mut g = STREAM_RECHECK.lock().unwrap();
+        for res in prune {
+            g.remove(&res);
+        }
+    }
+    if check.is_empty() {
+        return;
+    }
+
+    let results: Vec<(usize, u64, u64)> = check
+        .into_iter()
+        .map(|(res, src, size, prev_fp)| (res, prev_fp, sample_fingerprint(src, size)))
+        .collect();
+
+    let mut changed = Vec::new();
+    {
+        let mut g = STREAM_RECHECK.lock().unwrap();
+        for (res, prev_fp, cur_fp) in results {
+            let Some(st) = g.get_mut(&res) else {
+                continue;
+            };
+            if cur_fp != prev_fp {
+                *st = StreamRecheck { base_frame: frame, stage: 0, last_fp: cur_fp };
+                changed.push(res);
+            } else {
+                st.stage = st.stage.saturating_add(1);
+                if st.stage as usize >= STREAM_RECHECK_MILESTONES.len() {
+                    g.remove(&res);
+                }
+            }
+        }
+    }
+    if !changed.is_empty() {
+        let mut queued = 0u64;
+        {
+            let mut t = TEXTURES.lock().unwrap();
+            for res in changed {
+                if let Some(e) = t.by_res.get_mut(&res) {
+                    if !e.gpu_written && !e.pending {
+                        e.pending = true;
+                        PENDING.fetch_add(1, Ordering::Relaxed);
+                        queued += 1;
+                    }
+                }
+            }
+        }
+        if queued > 0 {
+            let total = STREAM_RECHECK_HITS.fetch_add(queued, Ordering::Relaxed) + queued;
+            if total == queued || (total.is_power_of_two() && total >= 16) {
+                crate::xlog_info!("D3D12.X: title textures: streamed unwatched re-uploads triggered: {total}");
+            }
+        }
+    }
 }
 
 /// staging bytes and texture count of one batch at most: bounds the persistent upload staging
@@ -876,6 +1132,10 @@ unsafe fn upload_all(todo: Vec<(ID3D12Resource, Upload)>) {
             if super::present::trace_frame() {
                 note_content(va, &r, &subs);
             }
+            if super::vram::level_pages() {
+                // (the queue waits for these mappings before the copies: `vram::before_execute` below)
+                map_levels_with_texels(&r, &subs);
+            }
             batch.push((r, subs, states));
         }
         let d = device as *mut c_void;
@@ -900,6 +1160,27 @@ unsafe fn upload_all(todo: Vec<(ID3D12Resource, Upload)>) {
             Err(e) => warn(&e),
         }
     }
+}
+
+/// (`vram::level_pages`) Before an upload of title texture `r`: its levels with texels in `subs`
+/// (its subresources as they go up) get their video memory pages if they have none - a texture
+/// placed with lazy levels; any other: nothing to do. A level of zeros has no texels: a streamed
+/// texture's larger levels before the title has memory behind them (read as zeros,
+/// `read_committed`). It keeps no pages, reads as zeros as it would with them, and its copy goes
+/// to tiles that are not mapped, which drops it (tiled resources tier 2).
+unsafe fn map_levels_with_texels(r: &ID3D12Resource, subs: &[Subresource]) {
+    if !super::vram::has_lazy_levels(r.as_raw() as usize) {
+        return;
+    }
+    // (one slice: its subresources are its levels)
+    let present: Vec<u32> = subs.iter().enumerate().filter(|(_, s)| !all_zero(&s.data)).map(|(i, _)| i as u32).collect();
+    super::vram::map_levels(r, Some(&present));
+}
+
+/// Whether every byte of `b` is zero (eight at a time: gigabytes a second where it is).
+fn all_zero(b: &[u8]) -> bool {
+    let mut words = b.chunks_exact(8);
+    words.all(|w| u64::from_ne_bytes(w.try_into().unwrap()) == 0) && words.remainder().iter().all(|&x| x == 0)
 }
 
 /// `XCL_TRACE_FRAME`: how much of a title texture's top level is not zero, each time it is
@@ -1244,8 +1525,8 @@ mod tests {
         use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_R8_UNORM, DXGI_SAMPLE_DESC};
         use windows_sys::Win32::System::Memory as mem;
 
-        let _vram_guard = super::super::vram::VRAM_TEST_LOCK.lock().unwrap();
-        let _guard = TEST_LOCK.lock().unwrap();
+        let _vram_guard = super::super::vram::VRAM_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         if super::super::backend() != super::super::Backend::Real {
             crate::gpu::recomp::runner::skip_test("no GPU");
             return;
@@ -1485,7 +1766,7 @@ mod tests {
     /// submission order, each time it is; a Reset forgets them; other resources are not noted.
     #[test]
     fn transitions_apply_when_their_list_is_submitted() {
-        let _guard = TEST_LOCK.lock().unwrap();
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         // RGBA8 64×64, 3 mips, 2 slices (6 subresources), 4KB_S
         let mut d = [0u8; 0x38];
         d[0..4].copy_from_slice(&3u32.to_le_bytes());
@@ -1599,6 +1880,18 @@ mod tests {
         }
     }
 
+    #[test]
+    fn small_cpu_filled_target_accepts_wide_glyph_atlas_and_rejects_large_or_depth() {
+        assert!(is_small_cpu_filled_target(2048, 128, 1, 0x300005), "2048x128 R8 glyph atlas must sync");
+        assert!(is_small_cpu_filled_target(1024, 1024, 1, 0x1));
+        assert!(is_small_cpu_filled_target(64, 64, 1, 0x5));
+        assert!(!is_small_cpu_filled_target(1, 1, 1, 0x1), "1x1 placeholders skipped");
+        assert!(!is_small_cpu_filled_target(2560, 1440, 1, 0x1), "full-screen RT skipped");
+        assert!(!is_small_cpu_filled_target(2048, 1024, 1, 0x1), ">1M pixel RT skipped");
+        assert!(!is_small_cpu_filled_target(256, 256, 1, 0x2), "depth buffers skipped");
+        assert!(!is_small_cpu_filled_target(256, 256, 4, 0x1), "MSAA RTs skipped");
+    }
+
     fn console_desc(dim: u32, w: u64, h: u32, array_or_depth: u16, mips: u16, format: u32, layout: u32) -> [u8; 0x38] {
         let mut d = [0u8; 0x38];
         d[0..4].copy_from_slice(&dim.to_le_bytes());
@@ -1672,8 +1965,8 @@ mod tests {
     /// chains (including packed mips), cubemap arrays (`extra_pages`) and 3D volumes upload intact.
     #[test]
     fn placed_title_textures_share_vram_and_preserve_pixels() {
-        let _vram_guard = super::super::vram::VRAM_TEST_LOCK.lock().unwrap();
-        let _guard = TEST_LOCK.lock().unwrap();
+        let _vram_guard = super::super::vram::VRAM_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         use windows::Win32::Graphics::Direct3D::D3D_FEATURE_LEVEL_11_0;
         use windows::Win32::Graphics::Dxgi::Common::DXGI_SAMPLE_DESC;
         use windows::Win32::Graphics::Dxgi::*;
@@ -1883,8 +2176,27 @@ mod tests {
                 assert_eq!(read_sub(r, 0), subresources(base + off, &xg::Texture::new(&d).unwrap())[0].data, "4 KiB neighbour at +{off:#x} crosstalk");
             }
             let pages_before_reuse = dev_pages();
+            // Binding sweeps pages idle for two seconds, so the device-wide count can fall
+            // here even when this placement shares the extra tile it already has.
+            let first = adj[1].as_raw() as usize;
+            let before = super::super::vram::mapped_tiles_for(dev_key, first);
             let reused = place_tex(base + 0x4000, &d16);
-            assert_eq!(dev_pages(), pages_before_reuse, "reusing unaligned va must share extra_pages tile");
+            if super::super::vram::is_placed_texture(first) {
+                let before = before.expect("the first unaligned placement is mapped");
+                assert!(!before.1.is_empty(), "a 16 KiB texture in a 64 KiB page uses an extra tile");
+                assert_eq!(
+                    super::super::vram::mapped_tiles_for(dev_key, first).as_ref(),
+                    Some(&before),
+                    "the first placement keeps its tiles when the va is placed again",
+                );
+                assert_eq!(
+                    super::super::vram::mapped_tiles_for(dev_key, reused.as_raw() as usize).as_ref().map(|t| &t.1),
+                    Some(&before.1),
+                    "reusing unaligned va must share extra_pages tile",
+                );
+            } else {
+                assert_eq!(dev_pages(), pages_before_reuse, "reusing unaligned va must share extra_pages tile");
+            }
             // Overwrite the first 64 KiB (covering +0x0000, +0x4000 (both adj[1] & reused), +0x8000, +0xC000)
             // WITHOUT releasing adj/reused: dead extra_pages (+0x4000, +0x8000) must drop immediately!
             let cover = place_tex(base, &d64);
@@ -1943,14 +2255,284 @@ mod tests {
                 }
                 // Placing a second cubemap at the same va must reuse every tile including extra_pages.
                 if label.contains("cubemap") {
-                    let p0 = dev_pages();
+                    // Binding sweeps unrelated targets idle for two seconds, so a device-wide
+                    // byte count can fall here even when every tile of this cube is shared.
+                    let mappings = super::super::vram::tile_mappings_for(dev.as_raw() as usize, res.as_raw() as usize).expect("cube is mapped");
+                    assert!(!mappings.0.is_empty() || !mappings.1.is_empty(), "cube must have mapped tiles");
                     let res2 = place_tex(base, &d);
-                    assert_eq!(dev_pages(), p0, "cubemap extra_pages must be reused at same va");
+                    assert_eq!(super::super::vram::tile_mappings_for(dev.as_raw() as usize, res2.as_raw() as usize).as_ref(), Some(&mappings),
+                        "the second cube must reuse every title-page and extra-page tile");
+                    assert_eq!(super::super::vram::tile_mappings_for(dev.as_raw() as usize, res.as_raw() as usize).as_ref(), Some(&mappings),
+                        "the original cube must keep the same tile mappings");
+                    println!("{label}: reused {} title-page tiles and {} extra-page tiles", mappings.0.len(), mappings.1.len());
                     drop(res2);
                 }
                 drop(res);
             }
             uma.free(base);
+        }
+    }
+
+    #[test]
+    fn range_is_fully_watched_handles_gaps_and_adjacent_spans() {
+        let watched = [(0x10_0000usize, 0x1_0000usize), (0x11_0000, 0x2_0000), (0x20_0000, 0x1_0000)];
+        assert!(range_is_fully_watched(0x10_0000, 0x8000, &watched));
+        // Spanning two adjacent watched ranges is fully watched.
+        assert!(range_is_fully_watched(0x10_F000, 0x4000, &watched));
+        assert!(range_is_fully_watched(0x10_0000, 0x3_0000, &watched));
+        // Crossing an unwatched gap or starting outside watched ranges is not fully watched.
+        assert!(!range_is_fully_watched(0x12_F000, 0x2000, &watched));
+        assert!(!range_is_fully_watched(0x13_0000, 0x1000, &watched));
+        assert!(!range_is_fully_watched(0x0F_F000, 0x2000, &watched));
+        assert!(!range_is_fully_watched(0x30_0000, 0x4000, &watched));
+        assert!(!range_is_fully_watched(0x10_0000, 0x1000, &[]));
+    }
+
+    #[test]
+    fn sample_fingerprint_detects_start_mid_and_end_changes_in_large_textures() {
+        let mut small = vec![0u8; 32 * 1024];
+        let h0 = unsafe { sample_fingerprint(small.as_ptr() as usize, small.len()) };
+        small[12345] = 0x5A;
+        let h1 = unsafe { sample_fingerprint(small.as_ptr() as usize, small.len()) };
+        assert_ne!(h0, h1, "small texture mutation must change fingerprint");
+
+        let mut large = vec![0u8; 256 * 1024];
+        let base = unsafe { sample_fingerprint(large.as_ptr() as usize, large.len()) };
+        // Start 16 KiB slice
+        large[1024] = 0x11;
+        let hs = unsafe { sample_fingerprint(large.as_ptr() as usize, large.len()) };
+        assert_ne!(base, hs, "start-slice write must change fingerprint");
+        // Middle 16 KiB slice
+        large[128 * 1024] = 0x22;
+        let hm = unsafe { sample_fingerprint(large.as_ptr() as usize, large.len()) };
+        assert_ne!(hs, hm, "mid-slice write must change fingerprint");
+        // End 16 KiB slice
+        let last = large.len() - 1;
+        large[last] = 0x33;
+        let he = unsafe { sample_fingerprint(large.as_ptr() as usize, large.len()) };
+        assert_ne!(hm, he, "end-slice write must change fingerprint");
+    }
+
+    #[test]
+    fn stream_recheck_schedule_catches_late_writes_and_resets_milestones() {
+        let desc = console_desc(3, 256, 256, 1, 1, 28, 0x109); // 256 KiB RGBA8
+        let tex = Arc::new(xg::Texture::new(&desc).expect("layout"));
+        let size = tex.size() as usize;
+        let mut backing = vec![0u8; size];
+        let va = backing.as_ptr() as usize;
+        let res_id = 0x7410_0001usize;
+        let gpu_res_id = 0x7410_0002usize;
+
+        let e_stream = Entry {
+            device: 0,
+            va,
+            src: va,
+            in_gpu_view: false,
+            tex: Arc::clone(&tex),
+            states: vec![D3D12_RESOURCE_STATE_COMMON],
+            pending: false,
+            gpu_written: false,
+            placed: false,
+            unmapped: false,
+            seq: 0,
+        };
+        let e_gpu = Entry {
+            device: 0,
+            va: va + size,
+            src: va,
+            in_gpu_view: false,
+            tex: Arc::clone(&tex),
+            states: vec![D3D12_RESOURCE_STATE_COMMON],
+            pending: false,
+            gpu_written: true,
+            placed: false,
+            unmapped: false,
+            seq: 0,
+        };
+        {
+            let mut t = TEXTURES.lock().unwrap();
+            let (d1, _) = t.insert(res_id, e_stream);
+            let (d2, _) = t.insert(gpu_res_id, e_gpu);
+            adjust_pending(d1 + d2);
+        }
+        let fp0 = unsafe { sample_fingerprint(va, size) };
+        {
+            let mut g = STREAM_RECHECK.lock().unwrap();
+            g.insert(res_id, StreamRecheck { base_frame: 100, stage: 0, last_fp: fp0 });
+            g.insert(gpu_res_id, StreamRecheck { base_frame: 100, stage: 0, last_fp: fp0 });
+        }
+
+        // Before first milestone (+4 frames -> frame 104), nothing is checked or re-queued.
+        backing[size - 16] = 0xAB;
+        unsafe { recheck_streamed_unwatched_at(&[], 103) };
+        assert!(!TEXTURES.lock().unwrap().by_res.get(&res_id).unwrap().pending);
+
+        // At milestone 0 (frame 104), late write is detected: pending becomes true, schedule resets
+        // to base_frame=104, stage=0, and the gpu_written entry is pruned without re-queuing.
+        unsafe { recheck_streamed_unwatched_at(&[], 104) };
+        {
+            let mut t = TEXTURES.lock().unwrap();
+            let e = t.by_res.get_mut(&res_id).unwrap();
+            assert!(e.pending, "late write to unwatched texture must re-queue upload at milestone 0");
+            e.pending = false;
+            PENDING.fetch_sub(1, Ordering::Relaxed);
+            assert!(!t.by_res.get(&gpu_res_id).unwrap().pending, "gpu_written texture must not be re-queued");
+        }
+        {
+            let g = STREAM_RECHECK.lock().unwrap();
+            assert!(!g.contains_key(&gpu_res_id), "gpu_written texture must be pruned from STREAM_RECHECK");
+            let st = g.get(&res_id).copied().expect("schedule reset after change");
+            assert_eq!((st.base_frame, st.stage), (104, 0));
+            assert_ne!(st.last_fp, fp0);
+        }
+
+        // Advance through all 5 milestones with no further writes: entry must not re-queue and must
+        // clean itself up after milestone 4 (+400 frames -> frame 504).
+        for f in [108, 116, 144, 224, 504] {
+            unsafe { recheck_streamed_unwatched_at(&[], f) };
+            assert!(!TEXTURES.lock().unwrap().by_res.get(&res_id).unwrap().pending, "unchanged texture must not re-queue at frame {f}");
+        }
+        assert!(!STREAM_RECHECK.lock().unwrap().contains_key(&res_id), "entry must retire after final 400-frame milestone");
+
+        forget(res_id);
+        forget(gpu_res_id);
+    }
+
+    /// Real GPU, `vram::level_pages` (`XCL_TEXTURE_LEVEL_PAGES=1`): a sampled texture placed on the
+    /// shared pages gets the pages of a level when an upload has texels for it. Its memory has
+    /// every level but the largest at first, as a title streams a texture: no page before the
+    /// first upload, then pages for those levels only and their texels right, zeros where there
+    /// are none. With memory under the largest level too, a texture placed there again (as a
+    /// title does) takes that level's pages - the others are shared - and holds all of it. A
+    /// texture the GPU writes gets the pages of all its levels.
+    #[test]
+    fn a_placed_texture_gets_the_pages_of_a_level_with_its_texels() {
+        let _vram_guard = super::super::vram::VRAM_TEST_LOCK.lock().unwrap();
+        let _guard = TEST_LOCK.lock().unwrap();
+        use windows::Win32::Graphics::Direct3D::D3D_FEATURE_LEVEL_11_0;
+        use windows::Win32::Graphics::Dxgi::Common::DXGI_SAMPLE_DESC;
+        use windows::Win32::Graphics::Dxgi::*;
+        use windows_sys::Win32::System::Memory::{VirtualAlloc, VirtualFree, MEM_COMMIT, MEM_RELEASE, MEM_RESERVE, PAGE_READWRITE};
+        const NAME: &str = "a_placed_texture_gets_the_pages_of_a_level_with_its_texels";
+        unsafe {
+            let factory: IDXGIFactory4 = CreateDXGIFactory1().expect("DXGI factory");
+            let Ok(adapter) = factory.EnumAdapters1(0) else { return println!("SKIPPED {NAME}: no adapter") };
+            if adapter.GetDesc1().is_ok_and(|d| d.Flags & DXGI_ADAPTER_FLAG_SOFTWARE.0 as u32 != 0) {
+                return println!("SKIPPED {NAME}: software adapter");
+            }
+            let mut dev: Option<ID3D12Device> = None;
+            let _ = D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_11_0, &mut dev);
+            let Some(dev) = dev else { return println!("SKIPPED {NAME}: no D3D12 device") };
+            let mut opts = D3D12_FEATURE_DATA_D3D12_OPTIONS::default();
+            if dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &mut opts as *mut _ as *mut c_void, std::mem::size_of_val(&opts) as u32).is_err()
+                || opts.ResourceHeapTier.0 < 2
+                || opts.TiledResourcesTier.0 < D3D12_TILED_RESOURCES_TIER_2.0
+            {
+                return println!("SKIPPED {NAME}: tiled tier < 2");
+            }
+            super::super::real::adopt(dev.as_raw(), super::super::real::Kind::Device);
+            let queue: ID3D12CommandQueue = dev.CreateCommandQueue(&D3D12_COMMAND_QUEUE_DESC::default()).unwrap();
+            let riid = &ID3D12Resource::IID as *const windows::core::GUID as *const windows_sys::core::GUID;
+            // 1024x1024 RGBA8, 11 levels, 64 KiB blocks: 5.4 MiB on the console
+            let d = console_desc(3, 1024, 1024, 1, 11, 28, 0x109);
+            let place_tex = |va: usize| -> ID3D12Resource {
+                let mut p = std::ptr::null_mut();
+                let hr = super::super::device_x::create_placed_resource_x(dev.as_raw(), va as u64, d.as_ptr(), D3D12_RESOURCE_STATE_COMMON.0 as u32, std::ptr::null(), riid, &mut p);
+                assert!(hr >= 0 && !p.is_null(), "CreatePlacedResourceX failed: {hr:#x}");
+                ID3D12Resource::from_raw(p)
+            };
+            let read_sub = |r: &ID3D12Resource, sub: u32| -> Vec<u8> {
+                let rd = r.GetDesc();
+                let mut fp = D3D12_PLACED_SUBRESOURCE_FOOTPRINT::default();
+                let (mut rows, mut row_bytes, mut total) = (0u32, 0u64, 0u64);
+                dev.GetCopyableFootprints(&rd, sub, 1, 0, Some(&mut fp), Some(&mut rows), Some(&mut row_bytes), Some(&mut total));
+                let mut rb: Option<ID3D12Resource> = None;
+                let buffer = D3D12_RESOURCE_DESC { Dimension: D3D12_RESOURCE_DIMENSION_BUFFER, Width: total, Height: 1, DepthOrArraySize: 1, MipLevels: 1, SampleDesc: DXGI_SAMPLE_DESC { Count: 1, Quality: 0 }, Layout: D3D12_TEXTURE_LAYOUT_ROW_MAJOR, ..Default::default() };
+                dev.CreateCommittedResource(&D3D12_HEAP_PROPERTIES { Type: D3D12_HEAP_TYPE_READBACK, ..Default::default() }, D3D12_HEAP_FLAG_NONE, &buffer, D3D12_RESOURCE_STATE_COPY_DEST, None, &mut rb).unwrap();
+                let rb = rb.unwrap();
+                let alloc: ID3D12CommandAllocator = dev.CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT).unwrap();
+                let list: ID3D12GraphicsCommandList = dev.CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, &alloc, None).unwrap();
+                let dst = D3D12_TEXTURE_COPY_LOCATION { pResource: std::mem::transmute_copy(&rb), Type: D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT, Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 { PlacedFootprint: fp } };
+                let src = D3D12_TEXTURE_COPY_LOCATION { pResource: std::mem::transmute_copy(r), Type: D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX, Anonymous: D3D12_TEXTURE_COPY_LOCATION_0 { SubresourceIndex: sub } };
+                list.CopyTextureRegion(&dst, 0, 0, 0, &src, None);
+                list.Close().unwrap();
+                own_work(|| {
+                    super::super::vram::before_execute(&queue);
+                    queue.ExecuteCommandLists(&[Some(list.cast().unwrap())]);
+                    texture::wait(&dev, &queue).unwrap();
+                });
+                let mut p = std::ptr::null_mut();
+                rb.Map(0, None, Some(&mut p)).unwrap();
+                let mut out = Vec::with_capacity(rows as usize * row_bytes as usize);
+                for y in 0..rows as usize {
+                    out.extend_from_slice(std::slice::from_raw_parts((p as *const u8).add(y * fp.Footprint.RowPitch as usize), row_bytes as usize));
+                }
+                rb.Unmap(0, None);
+                out
+            };
+            let tex = xg::Texture::new(&d).unwrap();
+            let surface = tex.texels().unwrap();
+            let (size, chain) = (tex.size() as usize, &surface.chain);
+            // the whole texture as the title will have it (no byte of a level zero), and what its
+            // levels then hold
+            let mut whole = vec![0u8; size];
+            for (m, l) in chain.levels.iter().enumerate() {
+                let pat: Vec<u8> = (0..l.width * l.height * surface.bpe as usize).map(|k| 1 + ((m * 7 + k * 13) % 251) as u8).collect();
+                chain.tile_level(&mut whole[..chain.slice_bytes], m, 0, &pat);
+            }
+            let want = subresources(whole.as_ptr() as usize, &tex);
+            assert_eq!(want.len(), 11);
+            // its place in the title's memory: everything below mip 0 is there (the levels follow
+            // each other from the smallest to mip 0, `tiling::Chain`)
+            let at = VirtualAlloc(std::ptr::null(), size.next_multiple_of(0x1_0000), MEM_RESERVE, PAGE_READWRITE) as usize;
+            assert_ne!(at, 0);
+            let top = chain.levels[0].offset;
+            assert!(top > 0 && top % 0x1000 == 0 && top < size, "mip 0 is the last part of the slice: from {top:#x} of {size:#x}");
+            assert!(!VirtualAlloc(at as *const c_void, top, MEM_COMMIT, PAGE_READWRITE).is_null());
+            std::ptr::copy_nonoverlapping(whole.as_ptr(), at as *mut u8, top);
+
+            super::super::vram::LEVEL_PAGES_FOR_TEST.store(true, Ordering::Relaxed);
+            let dev_key = dev.as_raw() as usize;
+            let dev_pages = || super::super::vram::page_bytes_for(dev_key).0;
+            let p0 = dev_pages();
+            let small = place_tex(at);
+            super::super::vram::LEVEL_PAGES_FOR_TEST.store(false, Ordering::Relaxed);
+            if !super::super::vram::has_lazy_levels(small.as_raw() as usize) {
+                // (not reserved, or a tiling that does not add up: it has its pages as before)
+                drop(small);
+                VirtualFree(at as *mut c_void, 0, MEM_RELEASE);
+                return println!("SKIPPED {NAME}: this adapter's texture was not placed with lazy levels");
+            }
+            super::super::vram::LEVEL_PAGES_FOR_TEST.store(true, Ordering::Relaxed);
+            assert_eq!(dev_pages(), p0, "no pages before the first upload");
+            // the tiles of mip 0 and of all of it, as this driver lays them out
+            let (mut all, mut n, mut mip0) = (0u32, 1u32, D3D12_SUBRESOURCE_TILING::default());
+            dev.GetResourceTiling(&small, Some(&mut all), None, None, Some(&mut n), 0, &mut mip0);
+            let top_tiles = mip0.WidthInTiles * mip0.HeightInTiles as u32 * mip0.DepthInTiles as u32;
+            assert!(n == 1 && top_tiles > 0 && top_tiles < all, "mip 0 has tiles of its own: {top_tiles} of {all}");
+            refresh(queue.as_raw());
+            assert_eq!(dev_pages() - p0, ((all - top_tiles) as usize) << 16, "pages for the levels with texels, none for mip 0");
+            for sub in 1..11u32 {
+                assert!(read_sub(&small, sub) == want[sub as usize].data, "level {sub} after the first upload");
+            }
+            assert!(read_sub(&small, 0).iter().all(|&b| b == 0), "a level without pages reads as zeros");
+            // the title maps memory under mip 0 and fills it
+            assert!(!VirtualAlloc((at + top) as *const c_void, size - top, MEM_COMMIT, PAGE_READWRITE).is_null());
+            std::ptr::copy_nonoverlapping(whole.as_ptr().add(top), (at + top) as *mut u8, size - top);
+            let full = place_tex(at);
+            refresh(queue.as_raw());
+            assert_eq!(dev_pages() - p0, (all as usize) << 16, "mip 0's pages come with its texels; the other levels' are shared");
+            for sub in 0..11u32 {
+                assert!(read_sub(&full, sub) == want[sub as usize].data, "level {sub} once all of it is there");
+            }
+            // what the GPU writes needs pages under all of the texture: the first one's mip 0 gets
+            // the pages of its address, which hold what the second one's upload put there
+            note_gpu_write(small.as_raw() as usize);
+            assert_eq!(dev_pages() - p0, (all as usize) << 16, "the same pages");
+            assert!(read_sub(&small, 0) == want[0].data, "a GPU-written texture has pages under all its levels");
+            super::super::vram::LEVEL_PAGES_FOR_TEST.store(false, Ordering::Relaxed);
+            drop((small, full));
+            VirtualFree(at as *mut c_void, 0, MEM_RELEASE);
         }
     }
 

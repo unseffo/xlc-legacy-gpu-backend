@@ -99,6 +99,10 @@ unsafe fn create_list(this: *mut c_void, node: u32, ty: u32, alloc: usize, pso: 
         let hr = real::dev_create_command_list(this, node, ty, alloc, resolved_pso, riid, ppv);
         if hr >= 0 && !ppv.is_null() && !(*ppv).is_null() {
             super::list_x::on_create(*ppv, alloc, pso, D3D12_COMMAND_LIST_TYPE(ty as i32));
+            super::dred::reset(*ppv);
+            if pso != 0 {
+                super::dred::mark_pipeline(*ppv, pso, resolved_pso);
+            }
         }
         hr
     };
@@ -645,6 +649,111 @@ pub(super) unsafe extern "system" fn create_sampler_x(this: *mut c_void, x: *con
     real::dev_create_sampler_x(this, &d, dest);
 }
 
+/// Whether a PC DXGI format can carry `D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS` on a texture
+/// resource (typed formats that support typed UAV load/store, plus their typeless family heads).
+/// Block-compressed (BC1–BC7), sRGB, 96-bit, depth/stencil, packed 16-bit/XR/YUV, `A8_UNORM`,
+/// `B8G8R8X8_*`, and `R9G9B9E5` formats cannot carry `ALLOW_UNORDERED_ACCESS` on PC D3D12
+/// (even `GetResourceAllocationInfo` rejects them with validation id=599 / `0x887A0001`).
+pub fn texture_format_allows_uav(format: u32) -> bool {
+    matches!(
+        format,
+        1..=4       // R32G32B32A32_TYPELESS / FLOAT / UINT / SINT
+        | 9..=14    // R16G16B16A16_TYPELESS / FLOAT / UNORM / UINT / SNORM / SINT
+        | 15..=18   // R32G32_TYPELESS / FLOAT / UINT / SINT
+        | 23..=25   // R10G10B10A2_TYPELESS / UNORM / UINT
+        | 26        // R11G11B10_FLOAT
+        | 27 | 28 | 30..=32 // R8G8B8A8_TYPELESS / UNORM / UINT / SNORM / SINT (not 29 SRGB)
+        | 33..=38   // R16G16_TYPELESS / FLOAT / UNORM / UINT / SNORM / SINT
+        | 39 | 41..=43 // R32_TYPELESS / FLOAT / UINT / SINT (not 40 D32_FLOAT)
+        | 48..=52   // R8G8_TYPELESS / UNORM / UINT / SNORM / SINT
+        | 53 | 54 | 56..=59 // R16_TYPELESS / FLOAT / UNORM / UINT / SNORM / SINT (not 55 D16_UNORM)
+        | 60..=64   // R8_TYPELESS / UNORM / UINT / SNORM / SINT
+        | 87 | 90   // B8G8R8A8_UNORM / TYPELESS (not 88 X8, 91 SRGB, 92 X8_TYPELESS)
+    )
+}
+
+/// Whether `format` is a typeless DXGI family head whose concrete siblings support typed UAVs.
+fn is_typeless_uav_format(format: u32) -> bool {
+    matches!(format, 1 | 9 | 15 | 23 | 27 | 33 | 39 | 48 | 53 | 60 | 90)
+}
+
+/// Evaluate `D3D12_FEATURE_DATA_FORMAT_SUPPORT` bits for whether `format` supports
+/// `D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS` on a PC device: typeless UAV family heads are
+/// allowed (D3D12 drivers do not set `TYPED_UNORDERED_ACCESS_VIEW` on `*_TYPELESS` formats
+/// because typed UAV views use concrete sibling formats), while concrete formats must advertise
+/// `TYPED_UNORDERED_ACCESS_VIEW` and `UAV_TYPED_LOAD | UAV_TYPED_STORE`.
+fn uav_format_supported_by_caps(format: u32, support1: u32, support2: u32) -> bool {
+    if is_typeless_uav_format(format) {
+        return true;
+    }
+    if (support1 & D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW.0 as u32) == 0 {
+        return false;
+    }
+    let typed_rw = (D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD.0 | D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE.0) as u32;
+    (support2 & typed_rw) != 0
+}
+
+static UAV_FORMAT_SUPPORT: Mutex<Option<HashMap<((u32, i32), u32), bool>>> = Mutex::new(None);
+
+/// Query (and cache per adapter LUID + format) whether the PC device supports `ALLOW_UNORDERED_ACCESS`
+/// on `format`. Falls back to `texture_format_allows_uav` if the device cannot be queried.
+unsafe fn device_format_supports_uav(device: *mut c_void, format: u32) -> bool {
+    if !texture_format_allows_uav(format) {
+        return false;
+    }
+    if is_typeless_uav_format(format) || device.is_null() {
+        return true;
+    }
+    let Some(dev) = ID3D12Device::from_raw_borrowed(&device) else {
+        return true;
+    };
+    let luid = dev.GetAdapterLuid();
+    let key = ((luid.LowPart, luid.HighPart), format);
+    if let Some(&cached) = UAV_FORMAT_SUPPORT.lock().unwrap().as_ref().and_then(|m| m.get(&key)) {
+        return cached;
+    }
+    let mut fs = D3D12_FEATURE_DATA_FORMAT_SUPPORT {
+        Format: windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT(format as i32),
+        ..Default::default()
+    };
+    let supported = if dev
+        .CheckFeatureSupport(
+            D3D12_FEATURE_FORMAT_SUPPORT,
+            &mut fs as *mut _ as *mut c_void,
+            std::mem::size_of_val(&fs) as u32,
+        )
+        .is_ok()
+    {
+        uav_format_supported_by_caps(format, fs.Support1.0 as u32, fs.Support2.0 as u32)
+    } else {
+        true
+    };
+    UAV_FORMAT_SUPPORT.lock().unwrap().get_or_insert_with(HashMap::new).insert(key, supported);
+    supported
+}
+
+/// Strip `D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS` from a PC texture resource desc when the
+/// device does not support UAVs for its format (or when the texture is multisampled).
+pub(super) unsafe fn strip_unsupported_uav_for_device(device: *mut c_void, mut d: [u8; 0x38]) -> [u8; 0x38] {
+    let dim = u32::from_le_bytes(d[0..4].try_into().unwrap());
+    let mut flags = u32::from_le_bytes(d[0x30..0x34].try_into().unwrap());
+    if dim != D3D12_RESOURCE_DIMENSION_BUFFER.0 as u32 && (flags & 4) != 0 {
+        let format = u32::from_le_bytes(d[0x20..0x24].try_into().unwrap());
+        let samples = u32::from_le_bytes(d[0x24..0x28].try_into().unwrap());
+        if samples > 1 || !device_format_supports_uav(device, format) {
+            flags &= !4;
+            d[0x30..0x34].copy_from_slice(&flags.to_le_bytes());
+        }
+    }
+    d
+}
+
+/// `pc_resource_desc` further validated against `device`'s `D3D12_FEATURE_FORMAT_SUPPORT` so
+/// `GetResourceAllocationInfo` never sees `ALLOW_UNORDERED_ACCESS` on an unsupported format.
+pub(super) unsafe fn pc_resource_desc_for_device(device: *mut c_void, x: &[u8; 0x38]) -> [u8; 0x38] {
+    strip_unsupported_uav_for_device(device, pc_resource_desc(x))
+}
+
 /// the console resource desc (0x38 bytes, D3D12_RESOURCE_DESC) as a PC one: its tile layouts
 /// and console flag bits mean nothing to a PC driver
 pub fn pc_resource_desc(x: &[u8; 0x38]) -> [u8; 0x38] {
@@ -668,11 +777,14 @@ pub fn pc_resource_desc(x: &[u8; 0x38]) -> [u8; 0x38] {
     if matches!(format, 116 | 117) {
         d[0x20..0x24].copy_from_slice(&10u32.to_le_bytes());
     }
-    // B5G5R5A1 / B4G4R4A4 targets: not ones a PC driver takes for rendering together with
-    // unordered access (a retail game's 2560x1440 one, flags 0x5: E_INVALIDARG) – R8G8B8A8, the
-    // same values with more bits; the GPU's own (nothing of the CPU's is laid out for them)
-    if matches!(format, 86 | 115) && flags & 5 != 0 {
+    // B5G5R5A1 / B4G4R4A4 targets (and B5G6R5 UAVs): not ones a PC driver takes for rendering
+    // or unordered access – R8G8B8A8 holds the same values with full PC RTV/UAV/SRV support.
+    if (matches!(format, 86 | 115) && flags & 5 != 0) || (format == 85 && flags & 4 != 0) {
         d[0x20..0x24].copy_from_slice(&28u32.to_le_bytes());
+    }
+    // B8G8R8X8_UNORM UAVs: PC D3D12 forbids ALLOW_UNORDERED_ACCESS on format 88 – promote to B8G8R8A8_UNORM (87).
+    if format == 88 && flags & 4 != 0 {
+        d[0x20..0x24].copy_from_slice(&87u32.to_le_bytes());
     }
     // R9G9B9E5_SHAREDEXP targets / UAVs: PC D3D12 forbids ALLOW_RENDER_TARGET and
     // ALLOW_UNORDERED_ACCESS on format 67 (Series S 1920x1080 target, flags 0x300005:
@@ -684,6 +796,14 @@ pub fn pc_resource_desc(x: &[u8; 0x38]) -> [u8; 0x38] {
     // a depth buffer the console also lets shaders write (a retail game's: ALLOW_DEPTH_STENCIL |
     // ALLOW_UNORDERED_ACCESS): the PC refuses the pair – the depth buffer stays
     if flags & 2 != 0 {
+        flags &= !4;
+    }
+    // Any non-buffer texture whose PC format cannot support typed UAVs (BC1–BC7, sRGB, depth,
+    // 96-bit, A8, B5G6R5, B8G8R8X8, etc.) or that is multisampled must not carry
+    // ALLOW_UNORDERED_ACCESS: PC D3D12 rejects even GetResourceAllocationInfo (id=599 / 0x887A0001).
+    let pc_format = u32::from_le_bytes(d[0x20..0x24].try_into().unwrap());
+    let samples = u32::from_le_bytes(d[0x24..0x28].try_into().unwrap());
+    if dim != D3D12_RESOURCE_DIMENSION_BUFFER.0 as u32 && (flags & 4) != 0 && (samples > 1 || !texture_format_allows_uav(pc_format)) {
         flags &= !4;
     }
     d[8..16].fill(0); // alignment: the driver's
@@ -703,6 +823,17 @@ pub fn pc_initial_state(flags: u32, state: u32) -> u32 {
         return (state & !0x8) | 0x10;
     }
     state
+}
+
+/// Like `pc_initial_state`, also dropping `D3D12_RESOURCE_STATE_UNORDERED_ACCESS` (`0x8`) when
+/// `pc_resource_desc` stripped `ALLOW_UNORDERED_ACCESS` from a non-depth texture.
+pub fn pc_initial_state_for_desc(orig_flags: u32, pc_flags: u32, state: u32) -> u32 {
+    let st = pc_initial_state(orig_flags, state);
+    if (pc_flags & 4) == 0 && (st & 0x8) != 0 {
+        st & !0x8
+    } else {
+        st
+    }
 }
 
 /// The PC format of a view, pipeline or clear value in the console's D16_UNORM_S8_UINT family:
@@ -755,12 +886,53 @@ pub fn pc_shader_view_format(resource: u32, view: u32) -> u32 {
         // R32_TYPELESS, R16_TYPELESS
         (39 | 40, 0 | 39 | 40) => 41,
         (53 | 55, 0 | 53 | 55) => 56,
-        // a target made R8G8B8A8 (`pc_resource_desc`)
-        (28, 86 | 115) => 28,
+        // a target made R8G8B8A8 / B8G8R8A8 (`pc_resource_desc`)
+        (28, 85 | 86 | 115) => 28,
+        (87, 88) => 87,
         // a target made R11G11B10_FLOAT (`pc_resource_desc`)
         (26, 67) => 26,
         (_, v) => v,
     }
+}
+
+/// Cached host `D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW` answers per `(adapter LUID, DXGI_FORMAT)`.
+static TYPED_UAV_SUPPORT: Mutex<Option<HashMap<((u32, i32), i32), bool>>> = Mutex::new(None);
+
+/// Map sRGB formats (never valid for PC UAVs) to their linear UAV-capable counterparts.
+pub fn pc_uav_linear_format(fmt: u32) -> u32 {
+    match fmt {
+        29 => 28, // R8G8B8A8_UNORM_SRGB -> R8G8B8A8_UNORM
+        91 => 87, // B8G8R8A8_UNORM_SRGB -> B8G8R8A8_UNORM
+        93 => 87, // B8G8R8X8_UNORM_SRGB -> B8G8R8A8_UNORM
+        f => f,
+    }
+}
+
+/// Whether the host D3D12 device supports typed UAV views (`D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW`)
+/// for `fmt`. Queries `CheckFeatureSupport` once per `(adapter LUID, fmt)` and caches the answer.
+pub(super) unsafe fn pc_typed_uav_supported(dev_raw: *mut c_void, fmt: i32) -> bool {
+    if dev_raw.is_null() || fmt <= 0 {
+        return true;
+    }
+    let Some(dev) = ID3D12Device::from_raw_borrowed(&dev_raw) else {
+        return true;
+    };
+    let luid = dev.GetAdapterLuid();
+    let key = ((luid.LowPart, luid.HighPart), fmt);
+    if let Some(&cached) = TYPED_UAV_SUPPORT.lock().unwrap().as_ref().and_then(|m| m.get(&key)) {
+        return cached;
+    }
+    let mut data = D3D12_FEATURE_DATA_FORMAT_SUPPORT {
+        Format: windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT(fmt),
+        ..Default::default()
+    };
+    let supported = if dev.CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &mut data as *mut _ as *mut c_void, std::mem::size_of_val(&data) as u32).is_err() {
+        true
+    } else {
+        data.Support1.0 & D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW.0 != 0
+    };
+    TYPED_UAV_SUPPORT.lock().unwrap().get_or_insert_with(HashMap::new).insert(key, supported);
+    supported
 }
 
 /// Whether a shader view in `pc_shader_view_format`'s format reads the stencil (plane 1 on the PC).
@@ -779,6 +951,29 @@ pub(super) unsafe fn pc_clear(clear: *const c_void, buf: &mut [u8; 24]) -> *cons
     buf.as_ptr() as *const c_void
 }
 
+/// The PC format of an optimized clear value (`clear_format`) for a resource whose PC format is
+/// `pc_format`: aligns promoted `B5G6R5` (`85 -> 28`) and `B8G8R8X8` (`88 -> 87`) UAV targets
+/// while preserving native `85`/`88` on render-target-only resources without UAV.
+pub(super) fn pc_clear_format(pc_format: u32, clear_format: u32) -> u32 {
+    match (pc_format, pc_target_format(clear_format)) {
+        (28, 85) => 28,
+        (87, 88) => 87,
+        (_, f) => f,
+    }
+}
+
+/// Like `pc_clear`, also aligning `clear.Format` with `pc_format` when `pc_resource_desc` promoted
+/// a UAV-capable `B5G6R5` (`85 -> 28`) or `B8G8R8X8` (`88 -> 87`) resource.
+pub(super) unsafe fn pc_clear_for_desc(clear: *const c_void, pc_format: u32, buf: &mut [u8; 24]) -> *const c_void {
+    if clear.is_null() || !crate::gpu::shader::readable(clear as usize, 24) {
+        return clear;
+    }
+    std::ptr::copy_nonoverlapping(clear as *const u8, buf.as_mut_ptr(), 24);
+    let f = u32::from_le_bytes(buf[0..4].try_into().unwrap());
+    buf[0..4].copy_from_slice(&pc_clear_format(pc_format, f).to_le_bytes());
+    buf.as_ptr() as *const c_void
+}
+
 /// device #25 GetResourceAllocationInfo(visible mask, count, descs) → {size, alignment},
 /// returned through a hidden pointer. Called the C way – (return buffer, device, …), XDefiant –
 /// or the C++ way – (device, return buffer, …): whichever argument is the device is `this`.
@@ -793,7 +988,7 @@ pub(super) unsafe extern "system" fn get_resource_allocation_info_x(a: *mut c_vo
         match crate::hle::xg::Texture::new(&x).ok().filter(|_| u32::from_le_bytes(x[0..4].try_into().unwrap()) != D3D12_RESOURCE_DIMENSION_BUFFER.0 as u32) {
             Some(t) => (t.size(), t.alignment()),
             None => {
-                let d = pc_resource_desc(&x);
+                let d = pc_resource_desc_for_device(this, &x);
                 let mut r = [0u64; 2];
                 pc(this, &mut r, mask, 1, &d);
                 (r[0], r[1])
@@ -895,20 +1090,33 @@ pub(super) unsafe extern "system" fn create_placed_resource_x(this: *mut c_void,
     if desc.is_null() || ppv.is_null() || !crate::gpu::shader::readable(desc as usize, 0x38) {
         return E_INVALIDARG;
     }
+    // the PC's reserved resource and tile mappings for it can take long where the console's
+    // placement takes no time (`pso_async::title_held`)
+    let _in_pc = super::pso_async::pc_call();
     let x: [u8; 0x38] = (desc as *const [u8; 0x38]).read_unaligned();
-    let d = pc_resource_desc(&x);
+    let d = pc_resource_desc_for_device(this, &x);
     let buffer = u32::from_le_bytes(d[0..4].try_into().unwrap()) == D3D12_RESOURCE_DIMENSION_BUFFER.0 as u32;
     note_alias(va as usize, &x);
     // console-only state bits (Unicorn Overlord's 4K display target: 0x100000) are not the
     // PC's: the PC refused the resource (E_INVALIDARG) and the title threw
     let state = pc_initial_state(u32::from_le_bytes(x[0x30..0x34].try_into().unwrap()), state);
     let mut clear_buf = [0u8; 24];
-    let clear = pc_clear(clear, &mut clear_buf);
+    let pc_format = u32::from_le_bytes(d[0x20..0x24].try_into().unwrap());
+    let clear = pc_clear_for_desc(clear, pc_format, &mut clear_buf);
     if buffer {
         if let Some(hr) = real::place_at_title_address(this, va as usize, &d, state, clear, riid, ppv) {
             return hr;
         }
     }
+    let state = if !buffer {
+        pc_initial_state_for_desc(
+            u32::from_le_bytes(x[0x30..0x34].try_into().unwrap()),
+            u32::from_le_bytes(d[0x30..0x34].try_into().unwrap()),
+            state,
+        )
+    } else {
+        state
+    };
     // render targets, depth buffers, UAV textures: in video memory, aliased by address (`vram`);
     // sampled textures: on the same shared 64 KiB pages when tiled resources allow, else committed
     let flags = u32::from_le_bytes(d[0x30..0x34].try_into().unwrap());
@@ -1021,7 +1229,7 @@ pub(super) unsafe extern "system" fn get_copyable_footprints_x(
     *t = u64::MAX;
     f(this, x.as_ptr(), first, num, base, layouts, rows, row_sizes, t);
     if *t == u64::MAX {
-        let d = pc_resource_desc(&x);
+        let d = pc_resource_desc_for_device(this, &x);
         f(this, d.as_ptr(), first, num, base, layouts, rows, row_sizes, total);
     }
 }
@@ -1123,7 +1331,12 @@ mod tests {
                 let mut r: Option<ID3D12Resource> = None;
                 dev.CreatePlacedResource(&heap, 0, &d, D3D12_RESOURCE_STATES(state as i32), None, &mut r).map(|_| r)
             };
-            assert!(place(0x8 & real::PC_RESOURCE_STATES).is_err(), "UNORDERED_ACCESS without the UAV flag");
+            // Microsoft's runtime refuses this state for a resource without the UAV flag. vkd3d-proton
+            // (under Wine) does not check it and creates the resource, so the refusal is asserted on
+            // Windows only; the state XCL asks for is checked on both below.
+            if !crate::util::under_wine() {
+                assert!(place(0x8 & real::PC_RESOURCE_STATES).is_err(), "UNORDERED_ACCESS without the UAV flag");
+            }
             let state = pc_initial_state(6, 0x8);
             assert_eq!(state, D3D12_RESOURCE_STATE_DEPTH_WRITE.0 as u32);
             let r = place(state).unwrap_or_else(|e| panic!("placed in {state:#x}: {e}"));
@@ -1170,6 +1383,71 @@ mod tests {
         assert_eq!(pc_shader_view_format(26, 67), 26);
         assert_eq!(pc_shader_view_format(67, 67), 67, "a sampled-only R9G9B9E5 texture that stayed one");
         assert_eq!((pc_target_format(86), pc_target_format(67), pc_target_format(118), pc_view_format(117)), (28, 26, 45, 10));
+    }
+
+    #[test]
+    fn pc_resource_desc_strips_uav_on_unsupported_formats_and_msaa() {
+        let make = |dim: u32, fmt: u32, samples: u32, flags: u32| {
+            let mut x = [0u8; 0x38];
+            x[0..4].copy_from_slice(&dim.to_le_bytes());
+            x[0x20..0x24].copy_from_slice(&fmt.to_le_bytes());
+            x[0x24..0x28].copy_from_slice(&samples.to_le_bytes());
+            x[0x30..0x34].copy_from_slice(&flags.to_le_bytes());
+            let d = pc_resource_desc(&x);
+            (
+                u32::from_le_bytes(d[0x20..0x24].try_into().unwrap()),
+                u32::from_le_bytes(d[0x30..0x34].try_into().unwrap()),
+            )
+        };
+        // Formats lacking typed UAV support on PC D3D12 must lose ALLOW_UNORDERED_ACCESS (0x4):
+        for fmt in [
+            5, 6, 7, 8,    // R32G32B32_* (96-bit)
+            19, 20, 21, 22, // R32G8X24 / D32S8
+            29, 91, 93,    // *_SRGB
+            40, 44, 45, 55, // D32 / R24G8 / D24S8 / D16
+            65, 66, 68, 69, // A8, R1, R8G8_B8G8, G8R8_G8B8
+            70, 71, 72, 74, 77, 80, 83, 95, 98, 99, // BC1..BC7
+            85, 88, 89, 92, // B5G6R5, B8G8R8X8, XR_BIAS
+            103, 107,      // YUV (NV12, YUY2)
+        ] {
+            let (out_fmt, out_flags) = make(3, fmt, 1, 0x4);
+            if matches!((fmt, out_fmt), (85, 28) | (88, 87)) {
+                // promoted to a format a PC driver takes as a UAV of the same values: the flag
+                // stays, and is valid there
+                assert_eq!(out_flags & 0x4, 0x4, "format {fmt} promoted to {out_fmt} keeps ALLOW_UNORDERED_ACCESS");
+            } else {
+                assert_eq!(out_fmt, fmt, "format {fmt} kept");
+                assert_eq!(out_flags & 0x4, 0, "format {fmt} must strip ALLOW_UNORDERED_ACCESS");
+            }
+        }
+        // Multisampled textures never support UAV even on UAV-capable formats:
+        assert_eq!(make(3, 28, 4, 0x5), (28, 0x1));
+        assert_eq!(make(3, 27, 2, 0x4), (27, 0x0));
+
+        // Valid UAV-capable single-sampled formats and typeless family heads keep ALLOW_UNORDERED_ACCESS:
+        for fmt in [1, 2, 10, 16, 24, 26, 27, 28, 30, 34, 39, 41, 42, 49, 53, 56, 60, 61, 87, 90] {
+            let (_, out_flags) = make(3, fmt, 1, 0x4);
+            assert_eq!(out_flags & 0x4, 0x4, "format {fmt} must retain ALLOW_UNORDERED_ACCESS");
+        }
+        // Buffers (dim == 1, format == 0) always retain ALLOW_UNORDERED_ACCESS:
+        assert_eq!(make(1, 0, 1, 0x4), (0, 0x4));
+
+        // Capability-bit check honors Support1 + Support2 (UAV_TYPED_LOAD | UAV_TYPED_STORE):
+        let s1 = D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW.0 as u32;
+        let load = D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD.0 as u32;
+        let store = D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE.0 as u32;
+        assert!(!uav_format_supported_by_caps(28, 0, load | store));
+        assert!(!uav_format_supported_by_caps(28, s1, 0));
+        assert!(uav_format_supported_by_caps(28, s1, store));
+        assert!(uav_format_supported_by_caps(28, s1, load | store));
+        assert!(uav_format_supported_by_caps(27, s1, 0), "typeless family head allows UAV");
+        assert!(uav_format_supported_by_caps(27, 0, 0), "real D3D12 drivers report Support1 = 0 for *_TYPELESS");
+        assert!(uav_format_supported_by_caps(39, 0, 0), "R32_TYPELESS allows UAV even with Support1 = 0");
+
+        // Initial state drops UNORDERED_ACCESS (0x8) when pc_resource_desc stripped UAV on a non-depth texture:
+        assert_eq!(pc_initial_state_for_desc(0x4, 0x0, 0x8), 0x0);
+        assert_eq!(pc_initial_state_for_desc(0x4, 0x4, 0x8), 0x8);
+        assert_eq!(pc_initial_state_for_desc(0x6, 0x2, 0x8), 0x10);
     }
 
     #[test]
@@ -1276,5 +1554,172 @@ mod tests {
         assert_eq!(allocation_of([(K64, K64), (u64::MAX, 0), (M4, M4)], |_, _, _, _| placed += 1), (u64::MAX, K64));
         assert_eq!(placed, 1);
         assert_eq!(allocation_of(std::iter::empty(), |_, _, _, _| {}), (0, 0));
+    }
+
+    #[test]
+    fn uav_format_promotion_and_linearization() {
+        let mut x = [0u8; 0x38];
+        x[0] = 3; // texture 2D
+        let desc = |x: &[u8; 0x38]| {
+            let d = pc_resource_desc(x);
+            (u32::from_le_bytes(d[0x20..0x24].try_into().unwrap()), u32::from_le_bytes(d[0x30..0x34].try_into().unwrap()))
+        };
+        x[0x20] = 85; // B5G6R5_UNORM + ALLOW_UNORDERED_ACCESS
+        x[0x30..0x34].copy_from_slice(&0x4u32.to_le_bytes());
+        assert_eq!(desc(&x), (28, 4), "B5G6R5 UAV promotes to R8G8B8A8_UNORM");
+        x[0x20] = 88; // B8G8R8X8_UNORM + ALLOW_UNORDERED_ACCESS
+        assert_eq!(desc(&x), (87, 4), "B8G8R8X8 UAV promotes to B8G8R8A8_UNORM");
+        x[0x30..0x34].copy_from_slice(&0x0u32.to_le_bytes()); // sampled-only B8G8R8X8 keeps its native format
+        assert_eq!(desc(&x), (88, 0));
+        assert_eq!(pc_shader_view_format(28, 85), 28);
+        assert_eq!(pc_shader_view_format(28, 115), 28);
+        assert_eq!(pc_shader_view_format(87, 88), 87);
+        assert_eq!(pc_uav_linear_format(29), 28);
+        assert_eq!(pc_uav_linear_format(91), 87);
+        assert_eq!(pc_uav_linear_format(93), 87);
+        assert_eq!(pc_uav_linear_format(28), 28);
+    }
+
+    #[test]
+    fn pc_clear_for_desc_aligns_promoted_uav_targets_only() {
+        let desc_fmt = |fmt: u32, flags: u32| {
+            let mut x = [0u8; 0x38];
+            x[0] = 3;
+            x[0x20..0x24].copy_from_slice(&fmt.to_le_bytes());
+            x[0x24] = 1;
+            x[0x30..0x34].copy_from_slice(&flags.to_le_bytes());
+            u32::from_le_bytes(pc_resource_desc(&x)[0x20..0x24].try_into().unwrap())
+        };
+        // Promoted RT+UAV resources align clear.Format; RT-only preserves native 85/88.
+        assert_eq!((pc_clear_format(desc_fmt(85, 5), 85), pc_clear_format(desc_fmt(88, 5), 88)), (28, 87));
+        assert_eq!((pc_clear_format(desc_fmt(85, 1), 85), pc_clear_format(desc_fmt(88, 1), 88)), (85, 88));
+        assert_eq!((pc_clear_format(28, 86), pc_clear_format(28, 115), pc_clear_format(26, 67), pc_clear_format(44, 118)), (28, 28, 26, 45));
+        let (mut raw, mut buf) = ([0u8; 24], [0u8; 24]);
+        raw[0..4].copy_from_slice(&85u32.to_le_bytes());
+        raw[4..8].copy_from_slice(&0.5f32.to_le_bytes());
+        unsafe {
+            assert_eq!(pc_clear_for_desc(raw.as_ptr() as *const c_void, 28, &mut buf), buf.as_ptr() as *const c_void);
+            assert_eq!((u32::from_le_bytes(buf[0..4].try_into().unwrap()), &buf[4..24]), (28, &raw[4..24]));
+            assert!(pc_clear_for_desc(std::ptr::null(), 28, &mut buf).is_null());
+        }
+    }
+
+    #[test]
+    fn gpu_promoted_uav_clear_values_pass_create_committed_resource() {
+        use windows::Win32::Graphics::Direct3D::D3D_FEATURE_LEVEL_11_0;
+        use windows::Win32::Graphics::Dxgi::*;
+        let dev = unsafe {
+            let mut dev: Option<ID3D12Device> = None;
+            if D3D12CreateDevice(None, D3D_FEATURE_LEVEL_11_0, &mut dev).is_err() {
+                let Ok(f) = CreateDXGIFactory1::<IDXGIFactory4>() else { return crate::gpu::recomp::runner::skip_test("no GPU or WARP"); };
+                let Ok(w) = f.EnumWarpAdapter::<IDXGIAdapter>() else { return crate::gpu::recomp::runner::skip_test("no GPU or WARP"); };
+                if D3D12CreateDevice(&w, D3D_FEATURE_LEVEL_11_0, &mut dev).is_err() { return crate::gpu::recomp::runner::skip_test("no GPU or WARP"); }
+            }
+            dev.unwrap()
+        };
+        let heap = D3D12_HEAP_PROPERTIES { Type: D3D12_HEAP_TYPE_DEFAULT, ..Default::default() };
+        for (orig_fmt, promoted_fmt) in [(85u32, 28u32), (88u32, 87u32)] {
+            let mut x = [0u8; 0x38];
+            x[0] = 3;
+            x[0x10..0x18].copy_from_slice(&64u64.to_le_bytes());
+            x[0x18..0x1C].copy_from_slice(&64u32.to_le_bytes());
+            x[0x1C] = 1;
+            x[0x1E] = 1;
+            x[0x20..0x24].copy_from_slice(&orig_fmt.to_le_bytes());
+            x[0x24] = 1;
+            x[0x30] = 5; // RT | UAV
+            unsafe {
+                let d_bytes = pc_resource_desc_for_device(dev.as_raw(), &x);
+                let pc_fmt = u32::from_le_bytes(d_bytes[0x20..0x24].try_into().unwrap());
+                assert_eq!(pc_fmt, promoted_fmt);
+                let d: D3D12_RESOURCE_DESC = std::ptr::read_unaligned(d_bytes.as_ptr() as *const _);
+                let clear = D3D12_CLEAR_VALUE {
+                    Format: windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT(orig_fmt as i32),
+                    Anonymous: D3D12_CLEAR_VALUE_0 { Color: [0.0, 0.0, 0.0, 1.0] },
+                };
+                let (mut old_buf, mut new_buf) = ([0u8; 24], [0u8; 24]);
+                let old_cv: D3D12_CLEAR_VALUE = std::ptr::read_unaligned(pc_clear(&clear as *const _ as *const c_void, &mut old_buf) as *const _);
+                let new_cv: D3D12_CLEAR_VALUE = std::ptr::read_unaligned(pc_clear_for_desc(&clear as *const _ as *const c_void, pc_fmt, &mut new_buf) as *const _);
+                let mut r: Option<ID3D12Resource> = None;
+                assert!(dev.CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &d, D3D12_RESOURCE_STATE_COMMON, Some(&old_cv), &mut r).is_err());
+                assert_eq!(new_cv.Format.0 as u32, promoted_fmt);
+                dev.CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &d, D3D12_RESOURCE_STATE_COMMON, Some(&new_cv), &mut r)
+                    .unwrap_or_else(|e| panic!("promoted {orig_fmt}->{promoted_fmt} CreateCommittedResource failed: {e}"));
+                assert!(r.is_some());
+            }
+        }
+    }
+
+    #[test]
+    fn device_format_supports_uav_keys_cache_by_adapter_luid() {
+        use windows::Win32::Foundation::LUID;
+        #[repr(C)]
+        struct FakeDev { vt: *const usize, luid: LUID, support_uav: bool, checks: u32 }
+        unsafe extern "system" fn check_feature(this: *mut c_void, feature: D3D12_FEATURE, data: *mut c_void, size: u32) -> HRESULT {
+            let d = &mut *(this as *mut FakeDev);
+            d.checks += 1;
+            if feature == D3D12_FEATURE_FORMAT_SUPPORT && size as usize >= std::mem::size_of::<D3D12_FEATURE_DATA_FORMAT_SUPPORT>() {
+                let fs = &mut *(data as *mut D3D12_FEATURE_DATA_FORMAT_SUPPORT);
+                fs.Support1 = if d.support_uav { D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW } else { D3D12_FORMAT_SUPPORT1(0) };
+                fs.Support2 = if d.support_uav { D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD | D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE } else { D3D12_FORMAT_SUPPORT2(0) };
+            }
+            S_OK
+        }
+        unsafe extern "system" fn adapter_luid(this: *mut c_void, out: *mut LUID) { *out = (*(this as *const FakeDev)).luid; }
+        let mut vt = [0usize; 44];
+        (vt[13], vt[43]) = (check_feature as usize, adapter_luid as usize);
+        let luid_a = LUID { LowPart: 0xD120_0001, HighPart: 0x5A17_0001 };
+        let luid_b = LUID { LowPart: 0xD120_0002, HighPart: 0x5A17_0001 };
+        let mut dev = FakeDev { vt: vt.as_ptr(), luid: luid_a, support_uav: false, checks: 0 };
+        let ptr = &mut dev as *mut FakeDev as *mut c_void;
+        unsafe {
+            assert!(!device_format_supports_uav(ptr, 24) && dev.checks == 1);
+            // Reuse exact same pointer for a different adapter LUID (pointer ABA).
+            (dev.luid, dev.support_uav) = (luid_b, true);
+            assert!(device_format_supports_uav(ptr, 24) && dev.checks == 2);
+            assert!(device_format_supports_uav(ptr, 24) && dev.checks == 2);
+        }
+        if let Some(m) = UAV_FORMAT_SUPPORT.lock().unwrap().as_mut() {
+            m.remove(&((luid_a.LowPart, luid_a.HighPart), 24));
+            m.remove(&((luid_b.LowPart, luid_b.HighPart), 24));
+        }
+    }
+
+    #[test]
+    fn get_copyable_footprints_x_strips_device_unsupported_uav_on_retry() {
+        use windows::Win32::Foundation::LUID;
+        #[repr(C)]
+        struct FakeAdoptedDev { vt: *const usize, luid: LUID, calls: u32, last_flags: u32 }
+        unsafe extern "system" fn check_feature(_this: *mut c_void, feature: D3D12_FEATURE, data: *mut c_void, size: u32) -> HRESULT {
+            if feature == D3D12_FEATURE_FORMAT_SUPPORT && size as usize >= std::mem::size_of::<D3D12_FEATURE_DATA_FORMAT_SUPPORT>() {
+                let fs = &mut *(data as *mut D3D12_FEATURE_DATA_FORMAT_SUPPORT);
+                (fs.Support1, fs.Support2) = (D3D12_FORMAT_SUPPORT1(0), D3D12_FORMAT_SUPPORT2(0));
+            }
+            S_OK
+        }
+        unsafe extern "system" fn adapter_luid(this: *mut c_void, out: *mut LUID) { *out = (*(this as *const FakeAdoptedDev)).luid; }
+        unsafe extern "system" fn footprints(this: *mut c_void, desc: *const u8, _: u32, _: u32, _: u64, _: *mut c_void, _: *mut u32, _: *mut u64, total: *mut u64) {
+            let d = &mut *(this as *mut FakeAdoptedDev);
+            d.calls += 1;
+            d.last_flags = u32::from_le_bytes(*(desc.add(0x30) as *const [u8; 4]));
+            if !total.is_null() { *total = if d.last_flags & 4 != 0 { u64::MAX } else { 65536 }; }
+        }
+        let mut orig_vt = [0usize; 44];
+        (orig_vt[13], orig_vt[38], orig_vt[43]) = (check_feature as usize, footprints as usize, adapter_luid as usize);
+        let mut ext_buf = [0usize; 45];
+        ext_buf[0] = orig_vt.as_ptr() as usize;
+        ext_buf[1..].copy_from_slice(&orig_vt);
+        let luid = LUID { LowPart: 0xD120_0003, HighPart: 0x5A17_0001 };
+        let mut dev = FakeAdoptedDev { vt: unsafe { ext_buf.as_ptr().add(1) }, luid, calls: 0, last_flags: u32::MAX };
+        let mut x = [0u8; 0x38];
+        (x[0], x[0x10], x[0x18], x[0x1C], x[0x1E], x[0x20], x[0x24], x[0x30]) = (3, 64, 64, 1, 1, 24, 1, 4);
+        let mut total = 0u64;
+        unsafe {
+            get_copyable_footprints_x(&mut dev as *mut FakeAdoptedDev as *mut c_void, x.as_ptr(), 0, 1, 0, std::ptr::null_mut(), std::ptr::null_mut(), std::ptr::null_mut(), &mut total);
+        }
+        assert_eq!((dev.calls, dev.last_flags & 4, total), (2, 0, 65536));
+        if let Some(m) = UAV_FORMAT_SUPPORT.lock().unwrap().as_mut() {
+            m.remove(&((luid.LowPart, luid.HighPart), 24));
+        }
     }
 }

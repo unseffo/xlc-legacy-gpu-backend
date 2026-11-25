@@ -18,6 +18,9 @@ pub const DATALAYOUT: &str = "e-m:e-p:32:32-i1:32-i8:32-i16:32-i32:32-i64:64-f16
 /// for most, a container feature bit (`SFI0`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Feature {
+    /// Prevents drivers from refactoring floating-point operations (e.g.
+    /// contracting separate `fmul` + `fadd` into FMA).
+    DisableMathRefactoring,
     Doubles,
     RawAndStructuredBuffers,
     WaveOps,
@@ -60,6 +63,7 @@ impl Feature {
             Feature::DoubleExtensions => 6,
             Feature::TiledResources => 12,
             Feature::TypedUavLoadAdditionalFormats => 13,
+            Feature::DisableMathRefactoring => 1,
         }
     }
     /// `D3D_SHADER_REQUIRES_*` container feature bit.
@@ -79,6 +83,7 @@ impl Feature {
             Feature::DoubleExtensions => 0x20,
             Feature::TiledResources => 0x100,
             Feature::TypedUavLoadAdditionalFormats => 0x800,
+            Feature::DisableMathRefactoring => 0,
         }
     }
 }
@@ -155,6 +160,20 @@ pub struct RawUav {
 }
 
 impl Shader {
+    pub(super) fn dispatch_piece(&self) -> Self {
+        Self {
+            m: self.m.declarations(),
+            stage: self.stage,
+            sm: self.sm,
+            entry: self.entry,
+            features: self.features.clone(),
+            bindings: self.bindings.clone(),
+            handle_ty: self.handle_ty,
+            props_ty: self.props_ty,
+            rov: self.rov,
+        }
+    }
+
     pub fn new(stage: Stage, sm: (u32, u32)) -> Shader {
         let mut m = Module::new();
         let entry = m.define_entry("main");
@@ -514,9 +533,12 @@ impl Shader {
             self.m.ret();
         }
         self.m.optimize();
+        self.finish_optimized(numthreads, wave_size)
+    }
+
+    pub(super) fn finish_optimized(mut self, numthreads: [u32; 3], wave_size: Option<u32>) -> Result<Vec<u8>, String> {
         self.infer_type_features();
-        let flags: u64 = self.features.iter().map(|f| f.metadata_bit()).fold(0, |a, b| a | b);
-        let sfi0: u64 = self.features.iter().map(|f| f.container_bit()).fold(0, |a, b| a | b);
+        let (flags, sfi0) = self.feature_flags();
 
         let m = &mut self.m;
         let one = m.md_i32(1);
@@ -572,6 +594,42 @@ impl Shader {
         let psv = Psv { stage: self.stage, min_wave, max_wave, numthreads, resources: psv_res, entry: "main".into() };
         Ok(container::container(self.stage, self.sm, &bitcode, sfi0, &psv))
     }
+
+    /// Computes `(metadata_flags, container_sfi0)` from required features.
+    ///
+    /// Omits `DisableMathRefactoring` when the optimized module still invokes
+    /// `dx.op.tertiary.*` `FMad` (op 46), since DXIL validation forbids `FMad`
+    /// together with `DisableMathRefactoring`.
+    pub(super) fn feature_flags(&self) -> (u64, u64) {
+        let drop_no_refactor = self.features.contains(&Feature::DisableMathRefactoring) && self.uses_fmad();
+        let mut flags = 0u64;
+        let mut sfi0 = 0u64;
+        for &f in &self.features {
+            if drop_no_refactor && f == Feature::DisableMathRefactoring {
+                continue;
+            }
+            flags |= f.metadata_bit();
+            sfi0 |= f.container_bit();
+        }
+        (flags, sfi0)
+    }
+
+    /// True if any surviving instruction calls `dx.op.tertiary.*` with opcode
+    /// `46` (`Tertiary::FMad`).
+    fn uses_fmad(&self) -> bool {
+        use super::module::{Block, InstInfo};
+        for b in 0..self.m.block_count() {
+            for &inst in self.m.block_insts(Block(b as u32)) {
+                let InstInfo::Call(name, args) = self.m.inst_info(inst) else { continue };
+                if name.starts_with("dx.op.tertiary.")
+                    && args.first().and_then(|&v| self.m.const_u64(v)) == Some(46)
+                {
+                    return true;
+                }
+            }
+        }
+        false
+    }
 }
 
 /// The function attributes DXC gives each `dx.op` declaration (DXC 1.9
@@ -606,6 +664,7 @@ pub fn dxc_fn_attrs(op: u32) -> Option<FnAttrs> {
         137 | 138 => ReadNone,                 // attributeAtVertex, viewID
         139 => ReadOnly,                       // rawBufferLoad
         140 => NoUnwind,                       // rawBufferStore
+        164 => ReadNone,                       // dot4AddU8Packed
         165..=169 => NoUnwind,                 // waveMatch, waveMultiPrefix*, mesh outputs
         170 => ReadOnly,                       // getMeshPayload
         171 | 172 => NoUnwind,                 // storeVertexOutput, storePrimitiveOutput

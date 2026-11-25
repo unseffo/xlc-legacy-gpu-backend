@@ -21,6 +21,7 @@ pub fn host_main(boot_path: &Path) -> i32 {
         crate::log::Level::parse(&boot.config.log_level),
         boot.config.log_to_stderr,
     );
+    crate::log::log_panics();
     crate::xlog_info!("XCL {} – host for '{}'", env!("CARGO_PKG_VERSION"), boot.title);
     crate::xlog_info!("game: {} (read-only folder: {})", boot.exe_path.display(), boot.game_root.display());
     crate::xlog_info!("XCL data: {}", boot.data_dir.display());
@@ -35,6 +36,10 @@ pub fn host_main(boot_path: &Path) -> i32 {
         std::env::set_var("XCL_UMA_MB", boot.config.uma_mb.to_string());
     }
     crate::state::set_boot(boot.clone());
+    let _ = std::thread::Builder::new().name("xcl-split-counts".into()).spawn(|| loop {
+        std::thread::sleep(std::time::Duration::from_secs(10));
+        crate::hle::d3d12x::real::log_dispatch_chain_counts();
+    });
     // `XCL_ACTIVITY=1`: every 2 s what the title did since (a timeline of where it stops)
     if std::env::var_os("XCL_ACTIVITY").is_some() {
         let _ = std::thread::Builder::new().name("xcl-activity".into()).spawn(|| {

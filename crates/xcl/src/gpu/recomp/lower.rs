@@ -88,6 +88,11 @@ pub trait Ir: Sink {
     fn whole_needs_exchange(&self) -> bool {
         false
     }
+    /// Whether this IR can lower whole-wave branches (`ballot` across the full console wave,
+    /// including a split wave64 whose partner half is present or spin-synced).
+    fn can_wave_branch(&self) -> bool {
+        !self.whole_needs_exchange()
+    }
     /// the number of bits set in `v` (`countbits`)
     fn count_bits(&mut self, v: Self::V) -> Self::V;
     /// `d` lowered with another lowering's instruction semantics (#1426's `Lw::inst_guarded`):
@@ -155,6 +160,9 @@ struct Lower<'a, I: Ir> {
     sum: &'a Summary,
     guarded: HashSet<u64>,
     wave_branches: bool,
+    /// Whether SCC is live after instruction `i` (used to skip dead whole-wave SCC ballots).
+    scc_live_after: Vec<bool>,
+    cur_inst: usize,
     wave64: bool,
     /// the markers: a number where a mask was written, a bit where a number was
     num_marker: I::V,
@@ -546,6 +554,15 @@ impl<'a, I: Ir> Lower<'a, I> {
         self.ir.icmp(Cmp::Ne, word, zero)
     }
 
+    /// Whole-wave `mask_nonzero` for an SCC write: skips the ballot (and any split-wave64
+    /// exchange barrier) when no subsequent instruction reads SCC before it is overwritten.
+    pub(super) fn mask_nonzero_scc(&mut self, bit: I::V) -> I::V {
+        if self.wave_branches && !self.scc_live_after[self.cur_inst] {
+            return self.ir.boolean(false);
+        }
+        self.mask_nonzero(bit)
+    }
+
     fn salu(&mut self, b: usize, d: &Decoded) -> R<()> {
         let name = d.inst.name;
         let fv = |f: &str| rdna2::field_value(d.enc, &d.words, f);
@@ -589,7 +606,7 @@ impl<'a, I: Ir> Lower<'a, I> {
                 if sd != 125 {
                     self.write_bit(b, sd, if base.ends_with("_WREXEC") { new } else { old });
                 }
-                let scc = self.mask_nonzero(new);
+                let scc = self.mask_nonzero_scc(new);
                 self.write_scc(b, scc);
                 return Ok(());
             }
@@ -613,7 +630,7 @@ impl<'a, I: Ir> Lower<'a, I> {
                 };
                 self.write_bit(b, sd, v);
                 if op != "MOV" {
-                    let scc = self.mask_nonzero(v);
+                    let scc = self.mask_nonzero_scc(v);
                     self.write_scc(b, scc);
                 }
                 return Ok(());
@@ -624,7 +641,7 @@ impl<'a, I: Ir> Lower<'a, I> {
         if cmp64.contains(&name) && [s0, s1].iter().any(|&c| c <= 127 && self.holds_mask(b, c as u8)) {
             let (a, c) = (self.src_bit(b, d, s0)?, self.src_bit(b, d, s1)?);
             let x = self.ir.bin(Bin::Xor, a, c);
-            let x = self.mask_nonzero(x);
+            let x = self.mask_nonzero_scc(x);
             let v = if name == cmp64[0] { self.not(x) } else { x };
             self.write_scc(b, v);
             return Ok(());
@@ -848,7 +865,7 @@ impl<'a, I: Ir> Lower<'a, I> {
                 const TWO_SOURCE: &[&str] = &[
                     "V_ADD_NC_U32", "V_ADD_U32", "V_SUB_NC_U32", "V_SUB_U32", "V_SUBREV_NC_U32", "V_SUBREV_U32", "V_AND_B32", "V_OR_B32", "V_XOR_B32",
                     "V_MUL_LO_U32", "V_LSHL_ADD_U32", "V_ADD_LSHL_U32", "V_LSHL_OR_B32", "V_AND_OR_B32", "V_OR3_B32", "V_XOR3_B32", "V_ADD3_U32",
-                    "V_LSHLREV_B32", "V_LSHRREV_B32", "V_ASHRREV_I32",
+                    "V_LSHLREV_B32", "V_LSHRREV_B32", "V_ASHRREV_I32", "V_MIN_U32", "V_MAX_U32", "V_MIN_I32", "V_MAX_I32",
                 ];
                 if !TWO_SOURCE.contains(&name) {
                     return Err(format!("unsupported {name}"));
@@ -900,6 +917,16 @@ impl<'a, I: Ir> Lower<'a, I> {
                             _ => Bin::AShr,
                         };
                         self.ir.bin(op, c, sh)
+                    }
+                    "V_MIN_U32" | "V_MAX_U32" | "V_MIN_I32" | "V_MAX_I32" => {
+                        let pred = match name {
+                            "V_MIN_U32" => Cmp::Ult,
+                            "V_MAX_U32" => Cmp::Ugt,
+                            "V_MIN_I32" => Cmp::Slt,
+                            _ => Cmp::Sgt,
+                        };
+                        let cond = self.ir.icmp(pred, a, c);
+                        self.ir.select(cond, a, c)
                     }
                     n => return Err(format!("unsupported {n}")),
                 }
@@ -1155,6 +1182,50 @@ fn lower<I: Ir>(insts: &[Decoded], stage: Stage, wave64: bool, ir: I) -> R<(I, V
     lower_with(insts, stage, wave64, ir, false).map(|(ir, stale, _)| (ir, stale))
 }
 
+/// Backward liveness of SCC over `sum.blocks`: `live_after[i]` is true when some path
+/// from instruction `i` can read SCC before an unconditional scalar instruction overwrites it.
+fn compute_scc_liveness(insts: &[Decoded], sum: &Summary) -> Vec<bool> {
+    let reads_scc = |d: &Decoded| -> bool {
+        matches!(d.inst.name, "S_CBRANCH_SCC0" | "S_CBRANCH_SCC1")
+            || d.ienc.operands.iter().any(|o| o.input && o.ty == "OPR_SSRC_SPECIAL_SCC")
+            || ["SSRC0", "SSRC1", "SRC0", "SRC1", "SRC2", "SOFFSET"]
+                .iter()
+                .any(|f| rdna2::field_value(d.enc, &d.words, f) == Some(253))
+    };
+    let writes_scc = |d: &Decoded| -> bool {
+        d.inst.name.starts_with("S_")
+            && d.ienc.operands.iter().any(|o| o.output && o.ty == "OPR_SSRC_SPECIAL_SCC")
+    };
+    let nb = sum.blocks.len();
+    let mut live_in = vec![false; nb];
+    let mut live_after = vec![false; insts.len()];
+    loop {
+        let mut changed = false;
+        for &b in sum.order.iter().rev() {
+            let block = &sum.blocks[b];
+            let mut live = block.succ.iter().any(|&(s, _)| live_in[s]);
+            for i in block.insts.clone().rev() {
+                live_after[i] = live;
+                let d = &insts[i];
+                if writes_scc(d) {
+                    live = false;
+                }
+                if reads_scc(d) {
+                    live = true;
+                }
+            }
+            if live_in[b] != live {
+                live_in[b] = live;
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    live_after
+}
+
 /// Survey: every reason the per-lane form refuses a compute program, not only the first. An
 /// instruction it refuses is left out and the lowering goes on, so a later reason may follow
 /// from an earlier one; a program the lane-mask analysis refuses gives that one reason.
@@ -1174,8 +1245,13 @@ fn lower_with<I: Ir>(insts: &[Decoded], stage: Stage, wave64: bool, mut ir: I, s
     let launch = if pixel { lane_masks::LaunchExec::Unknown } else { lane_masks::LaunchExec::All };
     // Ballots reconstruct every bit only when the entire console wave is present.
     let wave_branches = matches!(stage, Stage::Compute(cs) if cs.threads.iter().product::<u32>() % (if wave64 { 64 } else { 32 }) == 0)
-        && !ir.whole_needs_exchange();
+        && ir.can_wave_branch();
     let sum = lane_masks::analyze_branches(insts, wave64, launch, wave_branches).map_err(|e| e.to_string())?;
+    let scc_live_after = if wave_branches {
+        compute_scc_liveness(insts, &sum)
+    } else {
+        vec![true; insts.len()]
+    };
     let n = sum.blocks.len();
     if n == 0 {
         return Err("empty program".into());
@@ -1249,6 +1325,8 @@ fn lower_with<I: Ir>(insts: &[Decoded], stage: Stage, wave64: bool, mut ir: I, s
         sum: &sum,
         guarded,
         wave_branches,
+        scc_live_after,
+        cur_inst: 0,
         wave64,
         num_marker,
         bit_marker,
@@ -1432,6 +1510,7 @@ fn lower_with<I: Ir>(insts: &[Decoded], stage: Stage, wave64: bool, mut ir: I, s
                 l.ssa.seal(&mut l.ir, s);
                 l.unguarded = true;
                 for j in run.clone() {
+                    l.cur_inst = j;
                     let r = l.lower_inst(s, &insts[j]);
                     l.note_inst(r, s, &insts[j])?;
                 }
@@ -1449,6 +1528,7 @@ fn lower_with<I: Ir>(insts: &[Decoded], stage: Stage, wave64: bool, mut ir: I, s
                     i += 1;
                     continue;
                 }
+                l.cur_inst = i;
                 let r = l.lower_inst(cur, &insts[i]);
                 l.note_inst(r, cur, &insts[i])?;
                 i += 1;
@@ -3450,6 +3530,22 @@ pub(crate) mod tests {
         for (l, regs) in v.iter().enumerate() {
             assert_eq!((regs[1], regs[2]), (10, 10 + l as u32), "lane {l}");
         }
+    }
+
+    #[test]
+    fn integer_min_and_max() {
+        let lines: &[I] = &[
+            ("V_MOV_B32", "ENC_VOP1", &[("VDST", 1), ("SRC0", 129)]), // 1
+            ("V_MOV_B32", "ENC_VOP1", &[("VDST", 2), ("SRC0", 193)]), // -1 (0xFFFF_FFFF)
+            ("V_MIN_U32", "ENC_VOP2", &[("VDST", 3), ("SRC0", V + 1), ("VSRC1", 2)]),
+            ("V_MAX_U32", "ENC_VOP2", &[("VDST", 4), ("SRC0", V + 1), ("VSRC1", 2)]),
+            ("V_MIN_I32", "ENC_VOP2", &[("VDST", 5), ("SRC0", V + 1), ("VSRC1", 2)]),
+            ("V_MAX_I32", "ENC_VOP2", &[("VDST", 6), ("SRC0", V + 1), ("VSRC1", 2)]),
+            ENDPGM,
+        ];
+        let (s, v) = state(32);
+        let (_, v) = run(lines, false, &s, &v);
+        assert_eq!((v[0][3], v[0][4], v[0][5], v[0][6]), (1, u32::MAX, u32::MAX, 1));
     }
 
     /// The survey goes on past a refused instruction: both are reported, and a program the
