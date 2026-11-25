@@ -27,6 +27,7 @@
 - ОС: Windows 10 Pro 10.0.19045
 - Rust: 1.100.0 (0ef1bc386 2026-11-09)
 - Windows SDK / DXC: 10.0.26100.0 (dxc.exe at C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\dxc.exe)
+- System32\xgameruntime.dll: отсутствует (preflight Warning; диалоги/текст-ввод/invite недоступны — compute-тестам не мешает; лечится установкой Gaming Services)
 - Agility SDK: Microsoft.Direct3D.D3D12 **1.620.2** — `tools/fetch_agility.ps1` → `third_party/agility/`
   - `third_party/agility/build/native/bin/x64/D3D12Core.dll`: v1.620.2.0.20261106.5, 4874024 bytes, Authenticode **VALID** (CN=Microsoft Corporation)
   - SHA256 архива `third_party/agility.zip`: `70489669C2BBEAF318B62D72B0AC3E753D521387BFC848C9763791C4E920BFCC`
@@ -70,7 +71,7 @@
 | 0.3 | GATE G0: SM 6.6 PSO | done | TGT | 2026-11-25 | | tools/legacy_probe/out_tgt_inbox.json, out_tgt_agility.json | Выполнено в рамках 0.2a (по инструкции владельца): DXC 1.9.2602.17 + dxil.dll 1.9.2602.17, cs_6_6 и cs_6_0+WaveActiveSum, оба HRESULT записаны, вердикт G0 в «Решениях» и «Контрольных воротах» |
 | 0.4 | Baseline на DEV | todo | DEV | | | | |
 | 0.5 | Ветка + плейбук в репо | done | ANY | 2026-11-25 | 101e8c5 | AGENT_PLAYBOOK.md, PROGRESS.md | |
-| 0.6 | TGT: сборка и ранний прогон compute-тестов | todo | TGT | | | | |
+| 0.6 | TGT: сборка и ранний прогон compute-тестов | done | TGT | 2026-11-25 | | artifacts_tgt/test_mesh.log, test_recomp.log (логи, *.log вне git) | Release-сборка зелёная (2м09с). `--lib mesh`: 27 passed / 0 failed / 2 skipped (no mesh shaders). `--lib recomp`: 353 passed / 0 failed / 19 ignored (pre-existing benches/surveys) / 26 skipped (20 no wave64, 3 no mesh, 3 refused per-lane). XCL сам загрузил Agility v620; backend 'real' GTX 1080; **failed = 0** |
 | 0.7 | DEV: compute-проход на WARP (wave32) | todo | DEV | | | | |
 | 1.1 | Аудит PSO/record | todo | ANY | | | | |
 | 1.2 | Аудит two-pass/split | todo | ANY | | | | |
@@ -132,6 +133,7 @@
 - [2026-11-25 TGT] Шаг 0.2a выполнен (по инструкции владельца). A: `tools/fetch_agility.ps1` скачал Microsoft.Direct3D.D3D12 1.620.2 (SHA256 `7048…BFCC`, подпись Microsoft VALID, MIT) в `third_party/agility` (`third_party/` в .gitignore). B: проба переписана — Agility через `ID3D12SDKConfiguration1::CreateDeviceFactory` + `ApplyToGlobalState` (реплика загрузчика `gpu/agility.rs`; только `XCL_D3D12_DIR`, без неявного поиска локальных копий), SM-проб 6.8→6.0 при E_INVALIDARG, Windows/драйвер из реестра, G0 через DXC 1.9.2602.17 + dxil.dll 1.9.2602.17 (валидация IDxcValidator). C: два отдельных процесса — inbox → `out_tgt_inbox.json`, Agility → `out_tgt_agility.json` (загруженный DLL проверен по пути: third_party-версия, не системная; exit 0 в обоих). Результат: inbox SM 6.5, heap-RS и cs_6_6 PSO → E_INVALIDARG; **Agility SM 6.8, heap-RS ok, cs_6_6 PSO ok, cs_6_0 WaveActiveSum PSO ok в обоих**. SM 6.5-блокер снят: это лимит inbox-рентайма Windows 10 (agility.rs:1-17), не GPU. G0 = PASS. Шаг 0.3 закрыт в рамках 0.2a. Оба варианта прогнаны через `cargo run`, паник нет.
 - [2026-11-25 TGT] Анализ XCL при MeshShaderTier=0 / wave32 (к шагу 0.2a): preflight.rs:67-72 — SM<6.6 → Error «shaders cannot run», no-mesh → Warning «geometry and NGG programs are not drawn» (игра стартует, геометрии нет); real.rs:5296-5311 finish_two_pass — mesh-PSO отвергается драйвером → note_translation_error → E_INVALIDARG тайтлу; real.rs:5239-5243 — паттерн skip GPU-тестов «no mesh shaders»; wave32: preflight.rs:73-76 Note (две полуволны, медленнее), docs/wave64-on-wave32.md (реализовано для compute/NGG/ES+GS; VS/PS — upper_lanes), pso.rs:954-979 (graphics_wave32 / wave32_only_for_device), mesh_dispatch.rs:1-16 (rendezvous-каркас). Compute-проход NGG (cs_6_6) на TGT через Agility работоспособен — закрыть mesh-звено и должен легаси-бэкенд.
 - [2026-11-25 TGT] Исправление AI-подписи: в коммитах 4933c9f (0.1) и e302a75 (0.2) строка AI-assisted ошибочно указывала «qwen/qwen3.8-27b»; фактическая модель — **GLM-5.3 (opencode, melious/glm-5.3)**. Дальнейшие коммиты подписываются корректно.
+- [2026-11-25 TGT] Шаг 0.6 выполнен. Сборка: `cargo build --release --workspace` → «Finished release profile [optimized] in 2m 09s» (2 deprecation-предупреждения fetch_update→try_update, pre-existing, не мои). Тесты (оба прогона с `$env:XCL_D3D12_DIR` → third_party Agility, только на процесс): **XCL сам загрузил Agility SDK v620** (лог: «xcl: D3D12: Agility SDK v620 (D:\…\third_party\agility\build\native\bin\x64)»), «backend 'real' – NVIDIA GeForce GTX 1080 (8059 MiB VRAM)», UMA-окна открыты, ID3D12Device16-hook поднялся. `cargo test -p xcl --lib mesh` → **27 passed / 0 failed**, 2 skipped (оба «no mesh shaders»: gpu_mesh_mode_two_passes; passthrough_mesh_stream_accepts_a_triangle_driver_blob). `cargo test -p xcl --lib recomp` → **353 passed / 0 failed / 19 ignored** (pre-existing benches/retail-опросы, требуют XCL_SAMPLE_RPF/release-прогон) / 26 skipped: **20 «no wave64»** (нативные 64-лейновые тесты; wave32 подтверждён собственным детектом XCL — wave64_programs_supported=split, wave64_supported=false), **3 «no mesh shaders»** (gpu_mesh_mode_two_passes, gpu_geometry_mode_es_gs_strip, _with_branches), **3 «refused»** (per-lane форма direct-DXIL: f16 arithmetic / f16 packed / f32 conversions — осознанный отказ транслятора, lower_dxil.rs:703). **Failed compute-тестов на Pascal: 0** — ранний риск этапа 0 снят. Полные логи: artifacts_tgt/test_mesh.log, artifacts_tgt/test_recomp.log (вне git, *.log). `xcl inspect`: тайтл на TGT недоступен (нет D:\Game, нет XCL_SAMPLE_*). Compute-only семейство, прошедшее без mesh tier: gpu_mesh_mode_reads_memory_windows (tests.rs:3753, guard только gpu_ready — NGG compute → записи + UMA-окна), gpu_dispatch_matches_native_wave64_reference (wave64-рендеву на wave32), весь instruction-suite (353). Пометка для 7.3: mesh-зависимые тесты (gpu_mesh_mode_two_passes-семейство, ES+GS-strip, passthrough_mesh_stream) на TGT скипаются «no mesh shaders» — их compute-половина покрыта, mesh-половине нужны golden-тесты легаси-бэкенда (этап 3.5+).
 
 ## Решения (append-only)
 
@@ -144,5 +146,6 @@
 
 ## Next
 
-- DEV: шаги **0.4** (baseline), затем **0.7** (WARP wave32). TGT: **0.6** (сборка XCL + ранний прогон compute-тестов; зависимости 0.5 и 0.3/G0 выполнены).
-- Если TGT недоступна — работа на DEV идёт до этапа 7; TGT-шаги остаются `todo` («ждёт TGT»).
+- Этап 0 на TGT завершён (0.1, 0.2, 0.2a, 0.3, 0.6). Следующие доступные шаги — **ANY** (этап 1, аудит): **1.1** (PSO/record), затем 1.2, 1.3, 1.7; 1.4 — DEV. 1.5/1.6 — за 1.1–1.4.
+- DEV: **0.4** (baseline) и **0.7** (WARP wave32) — параллельно, ждут DEV-агента.
+- TGT-специфичных доступных шагов нет до этапа 7 (7.1–7.4 ждут этапов 1–6). TGT-агент, продолжая сессию, может брать ANY-шаги этапа 1 (пометка «взял: TGT»).
