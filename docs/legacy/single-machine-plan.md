@@ -18,7 +18,7 @@ single-machine reality, based on measured facts only.
 | F6 | System WARP (no package DLL): MeshShaderTier 0 — the mesh tests skip "no mesh shaders". The package d3d10warp.dll next to the exe is MANDATORY for any WARP mesh work | step 2.2 first run |
 | F7 | Retail game dump `<GAME_DIR>` (a folder, not an archive): the game exe reads fine (`xcl inspect`: console title, imports d3d12_xs.dll, 587 functions / 68 DLLs, **0 unimplemented**), and `<RPF>` = `<GAME_DIR>\shaders.rpf` (≈393 MB, all records `xbox-native`, 0 inflate errors, 0 undecoded dwords) is a valid shader pack | step 5 |
 | F8 | With `XCL_SAMPLE_RPF=<RPF>` the retail lib tests REALLY run on the 1080: `retail_pack_sample` and `gpu_retail_vs_blit_gen_amb_cube` (a real console VS translated, compiled and dispatched on Pascal) both pass (7 passed / 0 failed / 0 skipped in the `retail` filter) | step 5, `artifacts_tgt/test_retail_rpf.log` |
-| F9 | The 20 "no wave64" skips of the 1080 (13 unique tests) re-run on WARP **one test per process** (no cascade possible): **6 pass, 2 fail with REAL value mismatches, 5 fail on their own device removal**. The mismatches: `cross_lane_reads_agree_with_the_hlsl_path_on_the_gpu` (`lane reads, wave32: lane 8 v6: 21 vs 45`, lower.rs:4151) and `gpu_geometry_wave32_prefix_count_over_a_mask` (prefix counts wrong for lanes ≥ 32, tests.rs:4517) — both in the native-wave64 area the 1080 never executes. The 5 device-removal failures are all in the direct-DXIL path (`lower_dxil`), including with a single test in the process | step 2 of the owner's corrections, `artifacts_tgt/warp_iso.log` |
+| F9 | The 20 "no wave64" skips of the 1080 (13 unique tests) re-run on WARP **one test per process** (no cascade possible): **6 pass, 2 fail with value mismatches on WARP, 5 fail on their own device removal**. The mismatches (`cross_lane_reads_agree_with_the_hlsl_path_on_the_gpu`, lane 8 v6: 21 vs 45, lower.rs:4151; `gpu_geometry_wave32_prefix_count_over_a_mask`, prefix counts wrong for lanes ≥ 32, tests.rs:4517) are **on WARP with the cause not established**: WARP has a variable wave size (4–128), and it is not proven to be a recompiler bug — both tests sit in the native-wave64 area the 1080 never executes, so no hardware cross-check exists. The 5 device-removal failures are all in the direct-DXIL path (`lower_dxil`), including with a single test in the process | step 2 of the owner's corrections, `artifacts_tgt/warp_iso.log` |
 
 ## 1. What WARP is and is not (F3–F6)
 
@@ -29,9 +29,11 @@ compute pass writing the `res` records, the pass-through mesh shader, `DispatchM
 skips.
 
 **WARP is NOT a reference for the compute semantics suite.** Isolated single-test runs
-(F9) show two real value mismatches in the native-wave64 area (which the 1080 skips)
-and five self-contained device removals in the direct-DXIL path — a software renderer
-that disagrees on cross-lane/prefix semantics and drops the device cannot arbitrate
+(F9) show two value mismatches on WARP in the native-wave64 area (cause not
+established — WARP's wave size is variable, a recompiler bug is not proven; the 1080
+never executes that area) and five self-contained device removals in the direct-DXIL
+path — a software renderer that disagrees on cross-lane/prefix semantics and drops
+the device cannot arbitrate
 recompiler correctness. Nothing in the plan below uses WARP that way: WARP's roles are
 (a) the mesh-path reference for golden comparisons — always rendered on the SAME WARP
 device as the legacy chain when the comparison is bitwise (G2 primary, G1 secondary),
@@ -77,13 +79,32 @@ consistent with the 1080 note in 0.6.
 | G0 SM 6.6 PSO | TGT | **PASS already** (F1) | — |
 | G1 retail golden (3.7) | DEV mesh-GPU, retail golden | **Primary: 1080 vs its own records** — retail NGG programs run their compute pass on the 1080; the expected IB/args come from an **independent reference generator** built from the dumped records (below); comparison **bitwise**. **Secondary: WARP mesh reference** (`mesh_draw_split`) where WARP survives the retail set | the golden oracle is an independent implementation on the same device, not a mesh GPU; the WARP leg is secondary and partial (see risk 1) |
 
+**Proposed tolerance for the secondary WARP-vs-1080 metric (NOT fixed — awaiting the
+owner's word):**
+
+- **Coverage mask: exact (bitwise).** D3D12 rasterization rules (top-left fill) are
+  part of the spec, the vertex positions come from the same `res` records on both
+  devices, so the set of covered pixels must match exactly; any difference is a real
+  defect, not noise.
+- **Colour: PSNR ≥ 40 dB over the frame's covered pixels**, counted on the 8-bit
+  render target. Justification: the same fp32 attribute values quantised to 8 bits
+  differ by at most a few LSB (PSNR of ±1 LSB on 8-bit ≈ 48–52 dB); WARP computes
+  attribute interpolation in software with its own fp32/fp64 rounding, so 40 dB leaves
+  an order-of-magnitude margin for renderer rounding differences while still failing
+  on any structural colour error (a wrong triangle or attribute is typically < 20 dB).
+  A per-pixel companion — at most 1 LSB (1/255) difference on ≥ 99.9 % of covered
+  pixels — catches thin bright-edge errors that PSNR can average out.
+- These numbers are a proposal only; nothing is fixed until the owner approves, and
+  the decision must be written down before the first secondary-metric run (playbook
+  4.6).
+
 **G1 reference mechanism — how the reference is written independently of the code under test:**
 
 1. The compute pass (the existing, unchanged first pass — console NGG code translated to cs_6_6) runs on the 1080 and its `res` records are **dumped once** to a file outside the repo (the runner already reads records back in the mesh tests; the audit-1.1 dump is the same readback). The records are data, not code.
 2. A **reference generator** — a small standalone tool (in `tools/`, written for audit 1.1/goldens) reads that dump and produces the expected IB and args **straight from the record layout pinned in audit 1.1 and decision D2**: exclusive prefix sum of `primitive_count` over the record headers (the deterministic `(record, slot)` order), each primitive's three indices unpacked from the 10-10-10-1 dword, global vertex ids as `rec*max_vertices + local`, args as `[total, 1, 0, 0]`. It shares **no code** with the scan-CS/recon-CS emitters or the runtime chain: a second implementation of the same formulas, reviewed against the audit document.
 3. The legacy chain (scan-CS, recon-CS, ExecuteIndirect) runs on the 1080; its IB and args buffers are read back and compared **bitwise** against the generator's output.
 4. If the generator and the chain disagree, the tie-breaker is the WARP mesh reference (the same records through `mesh_draw_split` give the reference IB the mesh path itself consumes) and the audit-1.1 layout — a three-way disagreement means the contract document is wrong, which is a finding, not a failure of the check.
-| G2 picture (4.6) | DEV mesh-GPU frame vs legacy frame, bitwise/PSNR + owner's visual pass | **Primary: one device (WARP) for both paths, BITWISE** — `mesh_draw_split` reference frame vs the legacy chain's frame, same WARP, same program; no tolerance. **Secondary: WARP reference vs 1080 legacy** (cross-device, PSNR/epsilon fixed in advance). Owner's visual confirmation still mandatory | primary is bitwise (stronger than a tolerance) but on a software renderer; the hardware check is the tolerance-based secondary |
+| G2 picture (4.6) | DEV mesh-GPU frame vs legacy frame, bitwise/PSNR + owner's visual pass | **Primary: one device (WARP) for both paths, BITWISE** — `mesh_draw_split` reference frame vs the legacy chain's frame, same WARP, same program; no tolerance. **Secondary: WARP reference vs 1080 legacy** (cross-device, PSNR/epsilon fixed in advance). Owner's visual confirmation still mandatory. On retail shaders the primary leg is conditional on the pre-G2 check (retail NGG through the main HLSL path on WARP, §7.4) | primary is bitwise (stronger than a tolerance) but on a software renderer; the hardware check is the tolerance-based secondary |
 | G3 cull on == off (5.5) | DEV | **GTX 1080** only | none |
 | G4 title run + tests on TGT (7.2/7.3) | TGT | **unchanged** — and now concretely possible: the retail dump `<GAME_DIR>` exists (F7), so 7.2's "run the title" is no longer hypothetical | none (the gate was always TGT; the missing piece — a title — is now present) |
 
@@ -166,5 +187,12 @@ in the environment of a run; frames and shader dumps go to a folder outside the 
    generator vs the legacy chain on the 1080 (bitwise IB/args); G2 primary = mesh
    reference and legacy chain both on WARP, bitwise; the WARP-vs-1080 cross-device
    metric secondary with its tolerance fixed before the first run.
+   **Pre-G2 check (added with the owner's approval of the plan):** retail NGG programs
+   from `<RPF>` must run on WARP through the **main HLSL path** (not direct-DXIL,
+   `XCL_DIRECT_DXIL` unset) — all five WARP device removals (F9) are in the direct-DXIL
+   path, and the bitwise retail G2 needs the mesh half (`mesh_draw_split`) and the
+   legacy chain to survive the same retail set on WARP. This check runs as soon as the
+   golden tooling exists (3.5/3.7 setup): a sampled retail set through the mesh path on
+   WARP, survivor list recorded; the tolerance-free G2 on retail is conditional on it.
 5. 2.4/6.2/7.2 title runs with `<GAME_DIR>` — each individually approved by the owner
    before the first launch of the game.
