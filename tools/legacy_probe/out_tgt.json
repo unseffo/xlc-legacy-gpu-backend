@@ -20,6 +20,15 @@
     },
     {
       "index": 2,
+      "description": "NVIDIA GeForce GTX 1080\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
+      "dedicated_video_memory": 8450473984,
+      "dedicated_system_memory": 0,
+      "shared_system_memory": 34283788288,
+      "adapter_luid": "00000000:48C92162",
+      "driver_version": "n/a"
+    },
+    {
+      "index": 3,
       "description": "Microsoft Basic Render Driver\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000",
       "dedicated_video_memory": 0,
       "dedicated_system_memory": 0,
@@ -29,5 +38,15 @@
     }
   ],
   "device_created": true,
-  "device_adapter_index": 0
+  "device_adapter_index": 0,
+  "features": {
+    "mesh_shader_tier": 0,
+    "sampler_feedback_tier": 0,
+    "wave_lane_count_min": 32,
+    "wave_lane_count_max": 32,
+    "max_shader_model": "6.5",
+    "binding_tier": 3,
+    "tiled_resources": true,
+    "cross_adapter": true
+  }
 }

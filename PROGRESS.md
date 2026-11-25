@@ -27,8 +27,13 @@
 - ОС: Windows 10 Pro 10.0.19045
 - Rust: 1.100.0 (0ef1bc386 2026-11-09)
 - Windows SDK / DXC: 10.0.26100.0 (dxc.exe at C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\dxc.exe)
-- MeshShaderTier / WaveLaneCountMax / макс. SM: — (из 0.2: `tools/legacy_probe/out_tgt.json`)
-- G0 (SM 6.6 PSO): — (из 0.3)
+- MeshShaderTier: 0 (no mesh shaders — expected for Pascal)
+- SamplerFeedbackTier: 0
+- WaveLaneCountMin / Max: 32 / 32 (Pascal wave32 confirmed)
+- **MaxShaderModel: 6.5 (NOT 6.6 — CRITICAL RISK: XCL requires SM 6.6)**
+- BindingTier: 3 (RootObjects)
+- TiledResources: true
+- G0 (SM 6.6 PSO): — (из 0.3; likely FAIL since max SM is 6.5)
 - Каталог артефактов (вне репо): D:\xlc-legacy-gpu-backend\artifacts_tgt
 
 ### Общее
@@ -56,7 +61,7 @@
 | Шаг | Название | Статус | Машина | Дата | Коммит | Артефакты | Примечание |
 |---|---|---|---|---|---|---|---|
 | 0.1 | Проба: устройство TGT | done | TGT | 2026-11-25 | | tools/legacy_probe/out_tgt.json | Адаптеры: GTX 1080 (8GB VRAM), Microsoft Basic Render Driver; D3D12 device created on adapter 0 (FL 12_0) |
-| 0.2 | Проба: фичи D3D12 | todo | TGT | | | | |
+| 0.2 | Проба: фичи D3D12 | done | TGT | 2026-11-25 | | tools/legacy_probe/out_tgt.json | MeshShaderTier=0, WaveLane=32/32, **MaxSM=6.5 (NOT 6.6 — G0 risk)**, BindingTier=3, TiledResources=true |
 | 0.3 | GATE G0: SM 6.6 PSO | todo | TGT | | | | |
 | 0.4 | Baseline на DEV | todo | DEV | | | | |
 | 0.5 | Ветка + плейбук в репо | done | ANY | 2026-11-25 | 101e8c5 | AGENT_PLAYBOOK.md, PROGRESS.md | |
@@ -118,6 +123,7 @@
 - [2026-11-25 playbook] Журнал создан из PROGRESS_TEMPLATE.md (плейбук v2.0).
 - [2026-11-25 TGT] PROGRESS.md инициализирован: заполнено окружение TGT; шаг 0.5 (ветка + плейбук) отмечен done (коммит 101e8c5).
 - [2026-11-25 TGT] Шаг 0.1 выполнен: tools/legacy_probe создан, запущен; выделен GTX 1080 (8 GB VRAM, LUID 00000000:00007E43), D3D12 device created (FL 12_0); артефакт: tools/legacy_probe/out_tgt.json.
+- [2026-11-25 TGT] Шаг 0.2 выполнен: feature probe на adapter 0 — MeshShaderTier=0, SamplerFeedbackTier=0, WaveLaneCountMin/Max=32/32, **MaxShaderModel=6.5** (XCL требует 6.6 → G0 risk), BindingTier=3, TiledResources=true, ViewInstancingTier=true. Блокер добавлен.
 
 ## Решения (append-only)
 
@@ -125,7 +131,7 @@
 
 ## Блокеры
 
-- (пусто)
+- [2026-11-25 TGT] **MaxShaderModel = 6.5 on GTX 1080 (Pascal).** XCL requires SM 6.6 everywhere (agility.rs `format_no_sm66_message`). Step 0.3 (G0) will likely FAIL: `CreateComputePipelineState` with `cs_6_6` on this adapter is expected to return E_INVALIDARG or D3D12_E_INVALID_SHADER_MODEL. Owner decision needed: fallback strategy (lower SM requirement, WARP, different GPU, or abandon legacy backend on TGT).
 
 ## Next
 
