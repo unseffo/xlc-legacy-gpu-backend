@@ -79,7 +79,7 @@
 | 1.4 | Аудит стадий/GS + статистика NGG | todo | DEV | | | | |
 | 1.5 | Дизайн: D2/D3/D7/D8, оценка ёмкости | todo | ANY | | | | |
 | 1.6 | GATE-документ contract.md | todo | ANY | | | | |
-| 1.7 | Карта точек вставки | done | ANY (взял: TGT) | 2026-11-25 | | docs/legacy/audit-runtime.md | Центральный факт: рантайм two-pass НЕ существует (нет DispatchMesh-хука — grep; two-pass compute не в TRANSLATED_COMPUTE → DispatchX скипается; mesh-PSO не в TRANSLATED_GRAPHICS). 9 точек вставки с файл:символ: finish_two_pass (ветвление 4.2 + реестр TWO_PASS keyed-by-mesh-PSO), translated_mesh_stream_once/translated_gs_pso, graphics_bound, draw-хуки (draw_rects — прецедент), dispatch/dispatch_x (ГЛАВНАЯ точка: groups=x из аргумента, split из TwoPassPso; нужен обратный индекс compute→TwoPassPso), execute_indirect (COMMON→INDIRECT_ARGUMENT wrap обязателен и для легаси), dev_create_command_signature (сквозной; своя DRAW-сигнатура D6), frame.rs (frame-origin — сброс StoreRing D8) |
+| 1.7 | Карта точек вставки | done | ANY (взял: TGT) | 2026-11-25 | 65ce647 | docs/legacy/audit-runtime.md | Центральный факт: рантайм two-pass НЕ существует (нет DispatchMesh-хука — grep; two-pass compute не в TRANSLATED_COMPUTE → DispatchX скипается; mesh-PSO не в TRANSLATED_GRAPHICS). 9 точек вставки с файл:символ: finish_two_pass (ветвление 4.2 + реестр TWO_PASS keyed-by-mesh-PSO), translated_mesh_stream_once/translated_gs_pso, graphics_bound, draw-хуки (draw_rects — прецедент), dispatch/dispatch_x (ГЛАВНАЯ точка: groups=x из аргумента, split из TwoPassPso; нужен обратный индекс compute→TwoPassPso), execute_indirect (COMMON→INDIRECT_ARGUMENT wrap обязателен и для легаси), dev_create_command_signature (сквозной; своя DRAW-сигнатура D6), frame.rs (frame-origin — сброс StoreRing D8) |
 | 2.1 | Конфиг legacy_backend, cull_*, budget | todo | ANY | | | | |
 | 2.2 | effective_legacy() | todo | ANY | | | | |
 | 2.3 | Проброс флага (log-only) | todo | DEV | | | | |
@@ -161,5 +161,5 @@
 
 ## Next
 
-- Этап 1 (кроме 1.4/1.5/1.6) выполнен: 1.1, 1.2, 1.3, 1.7. **1.4** (статистика NGG из `<RPF>`) — НЕ начинать до отдельного слова владельца (чтение дампа игры не разрешено). 1.5 зависит от 1.3+1.4 → формально заблокирован 1.4; 1.6 — от 1.1–1.5. Возможный путь без 1.4: 1.5 на синтетике/дампах тестов с пометкой «дополнить retail-статистикой после разрешения» — только по слову владельца.
+- Этап 1: 1.1, 1.2, 1.3, 1.7 выполнены; **1.4 разрешён владельцем** (чтение `<RPF>` read-only, только агрегаты в документы, игра не запускается) — следующий шаг, машина «ANY (взял: TGT)». 1.5 после 1.4 (входы готовы: D5/D7-вердикты, B9, построчный эталон 1.2, G1-контракт 1.1, точки вставки 1.7, NGG-статистика 1.4); 1.6 — за 1.1–1.5.
 - TGT-специфичных шагов до этапа 7 нет. Smoke-прогон тайтла `<GAME_DIR>` — только по слову владельца (условие 0.4/2.4).
