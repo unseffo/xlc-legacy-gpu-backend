@@ -92,6 +92,16 @@ reference generator and the dump tooling:
 
 ## The dump
 
+**What this dump is:** `tools/record_dump` (this step) — a **replay of the test
+synthetic** of `gpu_mesh_mode_two_passes` (one triangle, `vertex_count = 3`,
+`primitive_count = 1`) through the real XCL path on the **GTX 1080** (Agility SDK,
+split-wave64 form): `translate_mesh` → DXC `cs_6_6` → `runner::run_in_arena`, all
+public XCL API, no XCL code touched. It is **not a retail shader** — the layout
+claims it confirms are the record format itself (header, vertex slots, packed
+primitive), which the synthetic exercises exactly like a retail program would;
+retail record statistics (max_vertices/max_primitives/outputs of real NGG
+programs) are step 1.4's, with `<RPF>`.
+
 `tools/record_dump` (this step) — the synthetic program of `gpu_mesh_mode_two_passes`
 through the real path on the **GTX 1080** (Agility SDK, split-wave64 form):
 
