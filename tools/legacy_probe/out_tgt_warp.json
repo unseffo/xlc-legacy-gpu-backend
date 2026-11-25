@@ -1,0 +1,65 @@
+{
+  "windows": {
+    "product_name": "Windows 10 Pro",
+    "display_version": "22H2",
+    "build": "19045",
+    "ubr": 6456
+  },
+  "gpu_name": "Microsoft Basic Render Driver",
+  "gpu_luid": "00000000:00008A36",
+  "gpu_driver_candidates": [],
+  "adapters": [
+    {
+      "index": 0,
+      "description": "Microsoft Basic Render Driver",
+      "dedicated_video_memory": 0,
+      "shared_system_memory": 34283788288,
+      "adapter_luid": "00000000:00008A36"
+    }
+  ],
+  "runtime": {
+    "mode": "agility",
+    "agility_dir": "D:\\xlc-legacy-gpu-backend\\third_party\\agility\\build\\native\\bin\\x64",
+    "agility_requested_sdk_version": 620,
+    "d3d12core_path": "D:\\xlc-legacy-gpu-backend\\third_party\\agility\\build\\native\\bin\\x64\\D3D12Core.dll",
+    "d3d12core_file_version": "1.620.2.0",
+    "d3d12core_sdk_version_export": 620,
+    "loaded_matches_request": true,
+    "warp_requested": true,
+    "d3d10warp_path": "D:\\xlc-legacy-gpu-backend\\tools\\legacy_probe\\target\\debug\\d3d10warp.dll",
+    "d3d10warp_file_version": "1.0.22.0",
+    "d3d10warp_is_system": false
+  },
+  "dxc": {
+    "dir": "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.26100.0\\x64",
+    "dxcompiler_file_version": "1.9.2602.17",
+    "dxil_file_version": "1.9.2602.17"
+  },
+  "features": {
+    "mesh_shader_tier": 10,
+    "sampler_feedback_tier": 100,
+    "wave_lane_count_min": 4,
+    "wave_lane_count_max": 128,
+    "shader_model_asked": "6_8",
+    "highest_shader_model": "6.8",
+    "resource_binding_tier": 3,
+    "resource_heap_tier": 2,
+    "tiled_resources_tier": 4,
+    "view_instancing_tier": 1
+  },
+  "g0": {
+    "root_signature": "ok",
+    "sm66": {
+      "compile": "ok",
+      "validate": "ok",
+      "pso": "ok"
+    },
+    "sm60_wave": {
+      "compile": "ok",
+      "validate": "ok",
+      "pso": "ok"
+    }
+  },
+  "fatal": null,
+  "notes": []
+}

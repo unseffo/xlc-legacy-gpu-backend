@@ -469,6 +469,12 @@ struct RuntimeInfo {
     d3d12core_sdk_version_export: Option<u32>,
     /// Some(false) in Agility mode = the system D3D12Core.dll was loaded (probe error).
     loaded_matches_request: Option<bool>,
+    /// XCL_ADAPTER=warp run: which d3d10warp.dll is actually loaded.
+    warp_requested: bool,
+    d3d10warp_path: Option<String>,
+    d3d10warp_file_version: Option<String>,
+    /// true when the loaded d3d10warp.dll is the OS copy under C:\Windows
+    d3d10warp_is_system: Option<bool>,
 }
 
 #[derive(serde::Serialize)]
@@ -532,6 +538,10 @@ fn main() {
             d3d12core_file_version: None,
             d3d12core_sdk_version_export: None,
             loaded_matches_request: None,
+            warp_requested: false,
+            d3d10warp_path: None,
+            d3d10warp_file_version: None,
+            d3d10warp_is_system: None,
         },
         dxc: None,
         features: None,
@@ -577,24 +587,38 @@ fn main() {
         f.clone()
     });
 
-    // Adapter enumeration + device creation on the first adapter that works.
+    // Adapter enumeration + device creation: XCL_ADAPTER=warp picks the WARP adapter
+    // (like XCL's own selector); otherwise the first hardware adapter that works.
+    let warp_mode = std::env::var("XCL_ADAPTER").is_ok_and(|v| v.trim().eq_ignore_ascii_case("warp"));
+    report.runtime.warp_requested = warp_mode;
     let mut device: Option<ID3D12Device> = None;
     let mut gpu_desc: Option<(String, String)> = None;
     unsafe {
-        let factory_dxgi: IDXGIFactory1 = match CreateDXGIFactory1() {
-            Ok(f) => f,
-            Err(e) => {
-                report.fatal = Some(format!("CreateDXGIFactory1: {e}"));
+        if warp_mode {
+            let f4: IDXGIFactory4 = match CreateDXGIFactory1() {
+                Ok(f) => f,
+                Err(e) => {
+                    report.fatal = Some(format!("CreateDXGIFactory1 (IDXGIFactory4): {e}"));
+                    finish(&out_path, &report, 1);
+                    return;
+                }
+            };
+            let adapter: IDXGIAdapter = match f4.EnumWarpAdapter() {
+                Ok(a) => a,
+                Err(e) => {
+                    report.fatal = Some(format!("EnumWarpAdapter: {e}"));
+                    finish(&out_path, &report, 1);
+                    return;
+                }
+            };
+            let Ok(desc) = adapter.GetDesc() else {
+                report.fatal = Some("WARP adapter GetDesc failed".into());
                 finish(&out_path, &report, 1);
                 return;
-            }
-        };
-        for i in 0.. {
-            let Ok(adapter) = factory_dxgi.EnumAdapters1(i) else { break };
-            let Ok(desc) = adapter.GetDesc1() else { continue };
+            };
             let name = String::from_utf16_lossy(&desc.Description).split('\0').next().unwrap_or("").to_string();
             report.adapters.push(AdapterInfo {
-                index: i,
+                index: 0,
                 description: name.clone(),
                 dedicated_video_memory: desc.DedicatedVideoMemory as u64,
                 shared_system_memory: desc.SharedSystemMemory as u64,
@@ -608,8 +632,39 @@ fn main() {
             if created.is_ok() && dev.is_some() {
                 device = dev;
                 gpu_desc = Some((name.clone(), report.adapters.last().unwrap().adapter_luid.clone()));
-                println!("Adapter {i}: {name} — D3D12 device created ({})", if factory.is_some() { "Agility factory" } else { "inbox D3D12CreateDevice" });
-                break;
+                println!("WARP adapter: {name} — D3D12 device created ({})", if factory.is_some() { "Agility factory" } else { "inbox D3D12CreateDevice" });
+            }
+        } else {
+            let factory_dxgi: IDXGIFactory1 = match CreateDXGIFactory1() {
+                Ok(f) => f,
+                Err(e) => {
+                    report.fatal = Some(format!("CreateDXGIFactory1: {e}"));
+                    finish(&out_path, &report, 1);
+                    return;
+                }
+            };
+            for i in 0.. {
+                let Ok(adapter) = factory_dxgi.EnumAdapters1(i) else { break };
+                let Ok(desc) = adapter.GetDesc1() else { continue };
+                let name = String::from_utf16_lossy(&desc.Description).split('\0').next().unwrap_or("").to_string();
+                report.adapters.push(AdapterInfo {
+                    index: i,
+                    description: name.clone(),
+                    dedicated_video_memory: desc.DedicatedVideoMemory as u64,
+                    shared_system_memory: desc.SharedSystemMemory as u64,
+                    adapter_luid: format!("{:08X}:{:08X}", desc.AdapterLuid.HighPart, desc.AdapterLuid.LowPart as u32),
+                });
+                let mut dev: Option<ID3D12Device> = None;
+                let created = match &factory {
+                    Some(f) => f.CreateDevice(&adapter, D3D_FEATURE_LEVEL_12_0, &mut dev),
+                    None => D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_12_0, &mut dev),
+                };
+                if created.is_ok() && dev.is_some() {
+                    device = dev;
+                    gpu_desc = Some((name.clone(), report.adapters.last().unwrap().adapter_luid.clone()));
+                    println!("Adapter {i}: {name} — D3D12 device created ({})", if factory.is_some() { "Agility factory" } else { "inbox D3D12CreateDevice" });
+                    break;
+                }
             }
         }
     }
@@ -660,6 +715,33 @@ fn main() {
                 report.notes.push("Agility run: D3D12Core.dll not even loaded".into());
                 exit_code = 2;
             }
+        }
+    }
+
+    // Which d3d10warp.dll is actually loaded (WARP runs: the package copy next to the
+    // probe exe must win over C:\Windows\System32 by the DLL search order)?
+    unsafe {
+        if let Ok(h) = GetModuleHandleW(PCWSTR(wide("d3d10warp.dll").as_ptr())) {
+            let mut buf = vec![0u16; 1024];
+            let n = GetModuleFileNameW(Some(h), &mut buf) as usize;
+            let path = String::from_utf16_lossy(&buf[..n.min(buf.len())]);
+            report.runtime.d3d10warp_path = Some(path.clone());
+            report.runtime.d3d10warp_file_version = file_version(Path::new(&path));
+            let is_sys = Path::new(&path).to_string_lossy().to_lowercase().starts_with(r"c:\windows\");
+            report.runtime.d3d10warp_is_system = Some(is_sys);
+            println!(
+                "Loaded d3d10warp.dll: {path} (file version {})",
+                report.runtime.d3d10warp_file_version.clone().unwrap_or_else(|| "n/a".into())
+            );
+            if warp_mode && is_sys {
+                report.notes.push(format!("WARP RUN LOADED THE SYSTEM d3d10warp.dll, not the package copy: {path}"));
+                println!("ERROR: WARP run loaded the system d3d10warp.dll, not the package copy next to the probe exe ({path})");
+                exit_code = 2;
+            }
+        } else if warp_mode {
+            report.notes.push("WARP run: d3d10warp.dll is not loaded in this process".into());
+            println!("ERROR: WARP run: d3d10warp.dll is not loaded in this process");
+            exit_code = 2;
         }
     }
 
